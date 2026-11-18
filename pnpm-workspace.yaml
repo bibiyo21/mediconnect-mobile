@@ -1,2 +1,6 @@
 # Expo + pnpm: hoisted node_modules so Metro and native autolinking find every package.
 nodeLinker: hoisted
+# Build scripts are opt-in (pnpm 12). @parcel/watcher ships prebuilt binaries; its
+# install script is not needed for Metro or CI.
+allowBuilds:
+  "@parcel/watcher": false

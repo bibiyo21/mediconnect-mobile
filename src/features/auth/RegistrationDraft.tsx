@@ -11,6 +11,11 @@ interface Draft {
   contact?: string;
   challenge?: OtpChallenge;
   verificationToken?: string;
+  /** Password reset: the contact and the code challenge sent to it. */
+  resetContact?: string;
+  resetChallenge?: OtpChallenge;
+  /** One-time message shown on the sign-in screen (for example after a password change). */
+  signInNotice?: string;
 }
 
 const Context = createContext<{ draft: Draft; update: (patch: Partial<Draft>) => void; reset: () => void } | null>(null);

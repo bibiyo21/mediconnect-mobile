@@ -43,6 +43,9 @@ In local development, one-time codes are queued. Run a worker, or drain the queu
 | `pnpm lint` | `expo lint` (ESLint 9 flat config) |
 | `pnpm test` | Jest |
 | `pnpm export:ios` / `export:android` | Production JavaScript bundles in `dist/` (this checks that Metro can bundle the app; it does not build a native binary) |
+| `pnpm e2e` | Playwright + axe on the web build, three viewports, API mocked (`e2e/helpers.ts`); `pnpm e2e:shots` captures screenshots |
+
+CI (`.github/workflows/ci.yml`) runs all of the above on every push and pull request, with `mediconnect-shared` checked out next to this repo.
 
 ### Environment
 
@@ -82,19 +85,21 @@ src/app/
   (auth)/register/contact.tsx step 1: email or mobile → POST /auth/otp (REGISTER)
   (auth)/register/verify.tsx  step 2: 6-digit code → POST /auth/otp/verify
   (auth)/register/details.tsx step 3: name, birth date, password, consent → POST /auth/register
+  (auth)/reset-password/index.tsx  reset step 1: email or mobile → POST /auth/forgot-password
+  (auth)/reset-password/new.tsx    reset step 2: code + new password → POST /auth/otp/verify, POST /auth/reset-password
   (app)/(tabs)/index.tsx      home shell (emergency notice, upcoming features)
   (app)/(tabs)/account.tsx    account summary (GET /auth/me), sign out (POST /auth/logout)
   (app)/devices.tsx           signed-in devices (GET /auth/devices, DELETE /auth/devices/{id})
 ```
 
-Shared UI (`src/components/ui`) covers Screen, Button, TextField, Checkbox, Card, Notice, StateView (loading, empty, error) and OfflineBanner. Design tokens are in `src/theme/tokens.ts` (48 pt touch targets). Fields carry labels, errors are announced, and buttons expose disabled and busy states.
+Shared UI (`src/components/ui`) covers Screen, Button, LinkButton, TextField (with Show/Hide for passwords), Checkbox, Card, Notice, StateView (loading, empty, error), ResendCodeButton (60 s countdown, matching the server limit) and OfflineBanner. Tokens come from `@mediconnect/design-system` (`docs/design-system.md`), light and dark. Fields carry labels, errors are announced, and buttons expose disabled and busy states.
 
 ## Backend dependencies and deferred items
 
 | Item | Status |
 |---|---|
 | Profile editing, dependents (`/patients/me`, `/patients/me/dependents`) | Phase 2. The account screen shows the summary from `/auth/me`. |
-| Password reset UI (`/auth/forgot-password`, `/auth/reset-password` exist) | Not built in this increment. The sign-in screen says it is coming. |
+| Password reset | Built in increment 10 (two screens). A reset signs out every device. |
 | Account deletion (App Store guideline 5.1.1(v)) | No endpoint yet; Phase 2. Required before any store submission. |
 | Legal document versions | Read from config (`EXPO_PUBLIC_*`); there is no public endpoint for current versions. The final documents await legal review. |
 | Verify a secondary email or mobile | Needs a profile-update endpoint to add one (Phase 2). The primary contact is verified at registration. |
@@ -111,8 +116,11 @@ The bundle identifier `ph.mediconnect.app` is a proposal (**D-34**, pending). Ap
 
 ## Known limitations
 
-- **Simulator and device testing:** not done. The development machine has no Xcode or Android SDK. What was verified: typecheck, lint, unit and component tests, `expo export` for iOS and Android, and the web build end to end against the local API.
-- **pnpm build scripts:** pnpm does not run the build script of `@parcel/watcher` (`pnpm approve-builds` was not run). The app does not need it.
+- **Simulator and device testing:** not done. The development machine has no Xcode or Android SDK. What was verified: typecheck, lint, unit and component tests, Playwright + axe, `expo export` and `expo prebuild` for iOS and Android, and the web build end to end against the local API (registration, sign-in, password reset).
+- **pnpm build scripts:** `@parcel/watcher` is explicitly denied in `pnpm-workspace.yaml` (`allowBuilds`). It ships prebuilt binaries; without that entry a fresh install fails on pnpm 12.
+- **Android permissions:** template permissions the app does not use (overlay, external storage) are blocked in `app.config.ts`. Verified with `expo prebuild` in a scratch copy.
+- **Dependency audit:** two advisories in build-time tooling only (`picomatch` via Metro and codegen, no patch yet; `minimatch` via `@expo/fingerprint`). Not shipped in the app; see `docs/security.md`.
+- **expo-doctor:** reports five Expo packages a patch or minor version behind. Newer versions are held back by the 7-day release-age policy; update with `npx expo install --check` once they qualify.
 - **ESLint:** pinned to 9, because `eslint-plugin-react` (from `eslint-config-expo`) breaks on ESLint 10.
 - **Error reporting:** no mobile Sentry SDK yet (planned, with the same scrubbing rules as the backend).
 - **Icons and splash:** tab icons are text glyphs, and the icon and splash are Expo placeholders until final artwork exists.

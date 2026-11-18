@@ -38,6 +38,30 @@ export const mfaSchema = z.object({
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Mirrors the backend password rule (RegisterRequest::passwordRule). */
+export const passwordRule = z
+  .string()
+  .min(10, 'Use at least 10 characters.')
+  .max(128)
+  .regex(/[A-Za-z]/, 'Include at least one letter.')
+  .regex(/\d/, 'Include at least one number.');
+
+/** Formats typed digits as YYYY-MM-DD so people never have to type the dashes. */
+export function formatDateInput(input: string): string {
+  const digits = input.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+}
+
+export const newPasswordSchema = z
+  .object({
+    code: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code.'),
+    password: passwordRule,
+    password_confirmation: z.string(),
+  })
+  .refine((v) => v.password === v.password_confirmation, { path: ['password_confirmation'], message: 'The passwords do not match.' });
+
 export const detailsSchema = z
   .object({
     first_name: z.string().trim().min(1, 'Enter your first name.').max(100),
@@ -47,13 +71,8 @@ export const detailsSchema = z
       .string()
       .trim()
       .optional()
-      .refine((v) => !v || (ISO_DATE.test(v) && !Number.isNaN(Date.parse(v)) && v > '1900-01-01' && v <= new Date().toISOString().slice(0, 10)), 'Use the format YYYY-MM-DD, for a date that is not in the future.'),
-    password: z
-      .string()
-      .min(10, 'Use at least 10 characters.')
-      .max(128)
-      .regex(/[A-Za-z]/, 'Include at least one letter.')
-      .regex(/\d/, 'Include at least one number.'),
+      .refine((v) => !v || (ISO_DATE.test(v) && !Number.isNaN(Date.parse(v)) && v > '1900-01-01' && v <= new Date().toISOString().slice(0, 10)), 'Enter a real date in the past, for example 1990-05-17.'),
+    password: passwordRule,
     password_confirmation: z.string(),
     accept_terms: z.boolean().refine((v) => v, 'You need to accept the Terms of Use and Privacy Notice to continue.'),
   })
@@ -63,3 +82,4 @@ export type ContactForm = z.infer<typeof contactSchema>;
 export type SignInForm = z.infer<typeof signInSchema>;
 export type CodeForm = z.infer<typeof codeSchema>;
 export type DetailsForm = z.infer<typeof detailsSchema>;
+export type NewPasswordForm = z.infer<typeof newPasswordSchema>;

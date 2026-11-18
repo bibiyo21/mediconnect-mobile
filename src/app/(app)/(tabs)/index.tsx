@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Card, Notice, Screen } from '@/components/ui';
 import { fetchMe } from '@/features/auth/api';
-import { typography } from '@/theme/tokens';
+import { space, typography } from '@/theme/tokens';
 import { useThemedStyles, type ThemeColors } from '@/theme/useTheme';
 
 /**
@@ -24,12 +24,15 @@ export default function Home() {
   return (
     <Screen topInset title={name ? `Hello, ${name}` : 'Hello'} subtitle="Welcome to MediConnect.">
       <Notice tone="warning" message="In an emergency, call 911 or go to the nearest emergency room. MediConnect is not for emergencies." />
-      {UPCOMING.map((item) => (
-        <Card key={item.title} title={item.title}>
-          <Text style={styles.body}>{item.body}</Text>
-          <Text style={styles.soon}>Coming soon</Text>
-        </Card>
-      ))}
+      <Card title="Coming soon to MediConnect">
+        <Text style={styles.soon}>Your account is ready. These features are on the way:</Text>
+        {UPCOMING.map((item) => (
+          <View key={item.title} style={styles.item} accessible accessibilityLabel={`${item.title}. ${item.body}`}>
+            <Text style={styles.itemTitle}>{item.title}</Text>
+            <Text style={styles.body}>{item.body}</Text>
+          </View>
+        ))}
+      </Card>
     </Screen>
   );
 }
@@ -37,5 +40,7 @@ export default function Home() {
 const createStyles = (c: ThemeColors) =>
   StyleSheet.create({
     body: { ...typography.body, color: c.textPrimary },
-    soon: { ...typography.small, color: c.textMuted },
+    soon: { ...typography.body, color: c.textSecondary },
+    item: { gap: space[1], paddingTop: space[2] },
+    itemTitle: { ...typography.label, color: c.textPrimary },
   });

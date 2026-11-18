@@ -29,6 +29,10 @@ export function useNavigationTheme(colors: ThemeColors) {
       headerStyle: { backgroundColor: colors.surface },
       headerTitleStyle: { color: colors.textPrimary },
       contentStyle: { backgroundColor: colors.background },
+      // Screens show their own large title (Screen); the header only carries the back button.
+      // `title` stays set per screen for the web document title and screen readers.
+      headerTitle: () => null,
+      headerShadowVisible: false,
     },
   } as const;
 }

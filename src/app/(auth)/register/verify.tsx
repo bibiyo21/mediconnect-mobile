@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Button, Notice, Screen, TextField } from '@/components/ui';
+import { Button, Notice, ResendCodeButton, Screen, TextField } from '@/components/ui';
 import { requestRegistrationCode, verifyCode } from '@/features/auth/api';
 import { useRegistrationDraft } from '@/features/auth/RegistrationDraft';
 import { applyServerErrors } from '@/lib/forms';
@@ -71,7 +71,7 @@ export default function RegisterVerify() {
         )}
       />
       <Button label="Verify" onPress={submit} loading={verify.isPending} />
-      <Button label="Send a new code" variant="secondary" onPress={() => resend.mutate()} loading={resend.isPending} />
+      <ResendCodeButton onResend={() => resend.mutate()} loading={resend.isPending} />
     </Screen>
   );
 }

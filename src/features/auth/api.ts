@@ -85,6 +85,22 @@ export async function requestRegistrationCode(contact: string): Promise<OtpChall
   return unwrap(await api.POST('/auth/otp', { body: { purpose: 'REGISTER', ...contactField(contact) } }));
 }
 
+export async function requestPasswordResetCode(contact: string): Promise<OtpChallenge> {
+  await prepareWrites();
+  return unwrap(await api.POST('/auth/forgot-password', { body: contactField(contact) })) as OtpChallenge;
+}
+
+/** Verifies the emailed or texted code, then sets the new password (two calls, one user action). */
+export async function resetPassword(input: { contact: string; challengeId: string; code: string; password: string; password_confirmation: string }): Promise<void> {
+  const verificationToken = await verifyCode(input.challengeId, input.code);
+  await prepareWrites();
+  unwrap(
+    await api.POST('/auth/reset-password', {
+      body: { ...contactField(input.contact), verification_token: verificationToken, password: input.password, password_confirmation: input.password_confirmation },
+    }),
+  );
+}
+
 export async function verifyCode(challengeId: string, code: string): Promise<string> {
   await prepareWrites();
   const data = unwrap(await api.POST('/auth/otp/verify', { body: { challenge_id: challengeId, code } }));

@@ -34,6 +34,13 @@ const config: ExpoConfig = {
   },
   android: {
     package: `${BUNDLE_ID}${suffix}`,
+    // Least privilege: template defaults the app does not use (overlay, external storage).
+    // Each permission is added with the feature that needs it (camera in Phase 8, files in Phase 9).
+    blockedPermissions: [
+      'android.permission.SYSTEM_ALERT_WINDOW',
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
+    ],
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
       foregroundImage: './assets/images/android-icon-foreground.png',

@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Button, Notice, Screen, TextField } from '@/components/ui';
+import { Button, LinkButton, Notice, Screen, TextField } from '@/components/ui';
 import { signIn } from '@/features/auth/api';
 import { useRegistrationDraft } from '@/features/auth/RegistrationDraft';
 import { applyServerErrors } from '@/lib/forms';
@@ -11,8 +11,13 @@ import { signInSchema, type SignInForm } from '@/lib/validation';
 
 export default function SignIn() {
   const [formError, setFormError] = useState<string | null>(null);
-  const { update } = useRegistrationDraft();
-  const { control, handleSubmit, setError, formState } = useForm<SignInForm>({ resolver: zodResolver(signInSchema), defaultValues: { identifier: '', password: '' } });
+  const { draft, update } = useRegistrationDraft();
+  // One-time notice (for example "password changed"), shown until the next action here.
+  const notice = draft.signInNotice;
+  const { control, handleSubmit, setError, formState, getValues } = useForm<SignInForm>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: { identifier: draft.resetContact ?? '', password: '' },
+  });
 
   const mutation = useMutation({
     mutationFn: (values: SignInForm) => signIn(values.identifier, values.password),
@@ -29,11 +34,13 @@ export default function SignIn() {
 
   const submit = handleSubmit((values) => {
     setFormError(null);
+    if (notice) update({ signInNotice: undefined });
     mutation.mutate(values);
   });
 
   return (
     <Screen title="Welcome back" subtitle="Sign in with your email address or mobile number.">
+      {notice && !formError ? <Notice tone="success" message={notice} /> : null}
       {formError ? <Notice tone="error" message={formError} /> : null}
       <Controller
         control={control}
@@ -42,9 +49,9 @@ export default function SignIn() {
           <TextField
             label="Email or mobile number"
             autoCapitalize="none"
+            autoCorrect={false}
             autoComplete="username"
             textContentType="username"
-            keyboardType="email-address"
             value={field.value}
             onChangeText={field.onChange}
             onBlur={field.onBlur}
@@ -70,7 +77,14 @@ export default function SignIn() {
         )}
       />
       <Button label="Sign in" onPress={submit} loading={mutation.isPending} />
-      <Notice message="Forgot your password? Password reset in the app is coming soon." />
+      <LinkButton
+        label="Forgot your password?"
+        onPress={() => {
+          update({ resetContact: getValues('identifier').trim() || undefined, signInNotice: undefined });
+          router.push('/reset-password');
+        }}
+      />
+      <LinkButton label="New to MediConnect? Create an account" onPress={() => router.replace('/register/contact')} />
     </Screen>
   );
 }

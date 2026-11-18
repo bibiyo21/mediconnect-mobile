@@ -1,4 +1,4 @@
-import { register, signIn } from '../api';
+import { register, requestPasswordResetCode, resetPassword, signIn } from '../api';
 import { api, session } from '@/lib/api';
 
 jest.mock('@/lib/api', () => ({
@@ -50,5 +50,37 @@ describe('auth api', () => {
     const body = (jest.mocked(api.POST).mock.calls[0] as unknown as [string, { body: Record<string, unknown> }])[1].body;
     expect(body).toMatchObject({ mobile: '09171234567', accept_terms_version: 'draft-2026-11', accept_privacy_notice_version: 'draft-2026-11' });
     expect(body).not.toHaveProperty('email');
+  });
+});
+
+describe('password reset', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('requests a reset code for a normalised mobile number', async () => {
+    jest.mocked(api.POST).mockResolvedValue({ data: { success: true, data: { challenge_id: 'c1', channel: 'SMS', destination_masked: '•••4567', expires_at: 'x' } }, response: new Response(null, { status: 202 }) } as never);
+
+    await expect(requestPasswordResetCode('0917 123 4567')).resolves.toMatchObject({ challenge_id: 'c1' });
+    expect(jest.mocked(api.POST).mock.calls[0]).toEqual(['/auth/forgot-password', { body: { mobile: '09171234567' } }]);
+  });
+
+  it('verifies the code first, then resets with the verification token, without signing in', async () => {
+    jest
+      .mocked(api.POST)
+      .mockResolvedValueOnce(ok({ verification_token: 'v'.repeat(64), expires_in_minutes: 10 }) as never)
+      .mockResolvedValueOnce(ok({}) as never);
+
+    await resetPassword({ contact: 'a@example.test', challengeId: 'c1', code: '123456', password: 'abcdefgh12', password_confirmation: 'abcdefgh12' });
+
+    const calls = jest.mocked(api.POST).mock.calls as unknown as [string, { body: Record<string, unknown> }][];
+    expect(calls.map((c) => c[0])).toEqual(['/auth/otp/verify', '/auth/reset-password']);
+    expect(calls[1][1].body).toEqual({ email: 'a@example.test', verification_token: 'v'.repeat(64), password: 'abcdefgh12', password_confirmation: 'abcdefgh12' });
+    expect(session.signIn).not.toHaveBeenCalled();
+  });
+
+  it('does not call reset when the code is wrong', async () => {
+    jest.mocked(api.POST).mockResolvedValueOnce({ error: { success: false, message: 'The code is invalid.', code: 'VALIDATION_FAILED', errors: { code: ['The code is invalid.'] } }, response: new Response(null, { status: 422 }) } as never);
+
+    await expect(resetPassword({ contact: 'a@example.test', challengeId: 'c1', code: '000000', password: 'abcdefgh12', password_confirmation: 'abcdefgh12' })).rejects.toThrow('The code is invalid.');
+    expect(api.POST).toHaveBeenCalledTimes(1);
   });
 });

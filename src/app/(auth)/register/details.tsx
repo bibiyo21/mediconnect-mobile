@@ -9,7 +9,7 @@ import { register } from '@/features/auth/api';
 import { useRegistrationDraft } from '@/features/auth/RegistrationDraft';
 import { LEGAL_VERSIONS } from '@/lib/config';
 import { applyServerErrors } from '@/lib/forms';
-import { detailsSchema, type DetailsForm } from '@/lib/validation';
+import { detailsSchema, formatDateInput, type DetailsForm } from '@/lib/validation';
 import { typography } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
@@ -60,7 +60,7 @@ export default function RegisterDetails() {
     <Controller
       control={control}
       name={name}
-      render={({ field }) => <TextField label={label} value={field.value ?? ''} onChangeText={field.onChange} onBlur={field.onBlur} error={errors[name]?.message} {...extra} />}
+      render={({ field }) => <TextField label={label} value={field.value ?? ''} onChangeText={name === 'date_of_birth' ? (v) => field.onChange(formatDateInput(v)) : field.onChange} onBlur={field.onBlur} error={errors[name]?.message} {...extra} />}
     />
   );
 
@@ -70,7 +70,7 @@ export default function RegisterDetails() {
       {text('first_name', 'First name', { autoComplete: 'given-name', textContentType: 'givenName' })}
       {text('middle_name', 'Middle name (optional)', { autoComplete: 'additional-name', textContentType: 'middleName' })}
       {text('last_name', 'Last name', { autoComplete: 'family-name', textContentType: 'familyName' })}
-      {text('date_of_birth', 'Date of birth (optional)', { hint: 'YYYY-MM-DD', autoComplete: 'birthdate-full', keyboardType: 'numbers-and-punctuation' })}
+      {text('date_of_birth', 'Date of birth (optional)', { hint: 'Year, month, day. For example 1990-05-17.', placeholder: 'YYYY-MM-DD', autoComplete: 'birthdate-full', keyboardType: 'number-pad', maxLength: 10 })}
       <Controller
         control={control}
         name="password"

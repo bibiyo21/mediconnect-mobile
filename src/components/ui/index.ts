@@ -1,8 +1,10 @@
 export { Button } from './Button';
 export { Card } from './Card';
 export { Checkbox } from './Checkbox';
+export { LinkButton } from './LinkButton';
 export { Notice } from './Notice';
 export { OfflineBanner } from './OfflineBanner';
+export { ResendCodeButton } from './ResendCodeButton';
 export { Screen } from './Screen';
 export { StateView } from './StateView';
 export { TextField } from './TextField';

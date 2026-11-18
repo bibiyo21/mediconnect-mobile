@@ -30,10 +30,11 @@ export default function Devices() {
       {devices.data?.length === 0 ? <StateView state="empty" message="No other devices are signed in." /> : null}
       {devices.data?.map((device) => (
         <Card key={device.id} title={device.device_name ?? PLATFORM[device.platform] ?? 'Device'}>
-          <Text style={styles.meta}>
-            {PLATFORM[device.platform] ?? device.platform}
-            {device.app_version ? ` · app ${device.app_version}` : ''}
-          </Text>
+          {device.device_name || device.app_version ? (
+            <Text style={styles.meta}>
+              {[device.device_name ? (PLATFORM[device.platform] ?? device.platform) : null, device.app_version ? `App version ${device.app_version}` : null].filter(Boolean).join(' · ')}
+            </Text>
+          ) : null}
           <Text style={styles.meta}>Last active: {formatDate(device.last_seen_at)}</Text>
           {device.current ? (
             <Text style={styles.current}>This device</Text>

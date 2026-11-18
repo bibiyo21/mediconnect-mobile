@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Button, Notice, Screen, TextField } from '@/components/ui';
+import { Button, LinkButton, Notice, Screen, TextField } from '@/components/ui';
 import { requestRegistrationCode } from '@/features/auth/api';
 import { useRegistrationDraft } from '@/features/auth/RegistrationDraft';
 import { applyServerErrors } from '@/lib/forms';
@@ -39,8 +39,8 @@ export default function RegisterContact() {
             label="Email or mobile number"
             hint="For example juan@example.com or 0917 123 4567"
             autoCapitalize="none"
+            autoCorrect={false}
             autoComplete="email"
-            keyboardType="email-address"
             value={field.value}
             onChangeText={field.onChange}
             onBlur={field.onBlur}
@@ -50,6 +50,7 @@ export default function RegisterContact() {
         )}
       />
       <Button label="Send code" onPress={submit} loading={mutation.isPending} />
+      <LinkButton label="Already have an account? Sign in" onPress={() => router.replace('/sign-in')} />
     </Screen>
   );
 }
