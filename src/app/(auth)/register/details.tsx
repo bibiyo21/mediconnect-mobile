@@ -10,7 +10,8 @@ import { useRegistrationDraft } from '@/features/auth/RegistrationDraft';
 import { LEGAL_VERSIONS } from '@/lib/config';
 import { applyServerErrors } from '@/lib/forms';
 import { detailsSchema, type DetailsForm } from '@/lib/validation';
-import { colors, typography } from '@/theme/tokens';
+import { typography } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 
 const FIELD_MAP = {
   first_name: 'first_name',
@@ -24,6 +25,7 @@ const FIELD_MAP = {
 } as const;
 
 export default function RegisterDetails() {
+  const { colors } = useTheme();
   const { draft, reset } = useRegistrationDraft();
   const [formError, setFormError] = useState<string | null>(null);
   const { control, handleSubmit, setError, formState } = useForm<DetailsForm>({
@@ -112,7 +114,7 @@ export default function RegisterDetails() {
             accessibilityLabel="I agree to the Terms of Use and the Privacy Notice"
             error={errors.accept_terms?.message}
             label={
-              <Text style={{ ...typography.body, color: colors.text }}>
+              <Text style={{ ...typography.body, color: colors.textPrimary }}>
                 I agree to the Terms of Use and the Privacy Notice (version {LEGAL_VERSIONS.terms}).
               </Text>
             }

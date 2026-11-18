@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, touchTarget, typography } from '@/theme/tokens';
+import { radius, size, space, typography } from '@/theme/tokens';
+import { useThemedStyles, type ThemeColors } from '@/theme/useTheme';
 
 interface Props {
   checked: boolean;
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function Checkbox({ checked, onChange, label, accessibilityLabel, error }: Props) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.wrapper}>
       <Pressable
@@ -32,14 +34,15 @@ export function Checkbox({ checked, onChange, label, accessibilityLabel, error }
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: { gap: spacing.xs },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: touchTarget },
-  box: { width: 24, height: 24, borderRadius: radius.sm, borderWidth: 2, borderColor: colors.muted, alignItems: 'center', justifyContent: 'center' },
-  boxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
-  boxError: { borderColor: colors.danger },
-  tick: { color: colors.primaryText, fontWeight: '700' },
-  label: { flex: 1 },
-  text: { ...typography.body, color: colors.text },
-  error: { ...typography.small, color: colors.danger },
-});
+const createStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    wrapper: { gap: space[1] },
+    row: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: size.control },
+    box: { width: 24, height: 24, borderRadius: radius.sm, borderWidth: 2, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center' },
+    boxChecked: { backgroundColor: c.primary, borderColor: c.primary },
+    boxError: { borderColor: c.error },
+    tick: { color: c.primaryForeground, fontWeight: '700' },
+    label: { flex: 1 },
+    text: { ...typography.body, color: c.textPrimary },
+    error: { ...typography.small, color: c.error },
+  });

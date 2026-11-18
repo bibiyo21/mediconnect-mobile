@@ -4,9 +4,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button, Card, Notice, Screen, StateView } from '@/components/ui';
 import { fetchMe, signOut } from '@/features/auth/api';
 import { userMessage } from '@/lib/errors';
-import { colors, spacing, typography } from '@/theme/tokens';
+import { space, typography } from '@/theme/tokens';
+import { useThemedStyles, type ThemeColors } from '@/theme/useTheme';
 
 function Row({ label, value }: { label: string; value: string }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.row} accessible accessibilityLabel={`${label}: ${value}`}>
       <Text style={styles.label}>{label}</Text>
@@ -16,6 +18,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 export default function Account() {
+  const styles = useThemedStyles(createStyles);
   const me = useQuery({ queryKey: ['me'], queryFn: fetchMe });
   const logout = useMutation({ mutationFn: signOut });
 
@@ -40,9 +43,10 @@ export default function Account() {
   );
 }
 
-const styles = StyleSheet.create({
-  row: { gap: spacing.xs, paddingVertical: spacing.xs },
-  label: { ...typography.small, color: colors.muted },
-  value: { ...typography.body, color: colors.text },
-  note: { ...typography.small, color: colors.muted },
-});
+const createStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    row: { gap: space[1], paddingVertical: space[1] },
+    label: { ...typography.small, color: c.textMuted },
+    value: { ...typography.body, color: c.textPrimary },
+    note: { ...typography.small, color: c.textMuted },
+  });

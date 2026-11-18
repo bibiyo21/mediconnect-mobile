@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
-import { colors, radius, spacing, touchTarget, typography } from '@/theme/tokens';
+import { radius, size, space, typography } from '@/theme/tokens';
+import { useTheme, useThemedStyles, type ThemeColors } from '@/theme/useTheme';
 
 interface Props extends Omit<TextInputProps, 'style'> {
   label: string;
@@ -9,6 +10,8 @@ interface Props extends Omit<TextInputProps, 'style'> {
 
 /** Labelled input; the error is announced and tied to the field for screen readers. */
 export function TextField({ label, error, hint, ...input }: Props) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label} nativeID={`${label}-label`}>
@@ -18,7 +21,7 @@ export function TextField({ label, error, hint, ...input }: Props) {
         accessibilityLabel={label}
         accessibilityHint={error ?? hint}
         aria-invalid={error ? true : undefined}
-        placeholderTextColor={colors.muted}
+        placeholderTextColor={colors.textMuted}
         style={[styles.input, error ? styles.inputError : null]}
         {...input}
       />
@@ -33,20 +36,21 @@ export function TextField({ label, error, hint, ...input }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: { gap: spacing.xs },
-  label: { ...typography.label, color: colors.text },
-  input: {
-    minHeight: touchTarget,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    ...typography.body,
-    color: colors.text,
-  },
-  inputError: { borderColor: colors.danger },
-  error: { ...typography.small, color: colors.danger },
-  hint: { ...typography.small, color: colors.muted },
-});
+const createStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    wrapper: { gap: space[1] },
+    label: { ...typography.label, color: c.textPrimary },
+    input: {
+      minHeight: size.control,
+      borderWidth: size.hairline,
+      borderColor: c.borderStrong,
+      borderRadius: radius.md,
+      backgroundColor: c.surface,
+      paddingHorizontal: space[4],
+      ...typography.body,
+      color: c.textPrimary,
+    },
+    inputError: { borderColor: c.error },
+    error: { ...typography.small, color: c.error },
+    hint: { ...typography.small, color: c.textMuted },
+  });

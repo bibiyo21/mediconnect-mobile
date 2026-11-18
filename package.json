@@ -36,6 +36,9 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@mediconnect/design-system": "link:../shared/packages/design-system",
+    "@playwright/test": "^1.65.1",
     "@testing-library/react-native": "^14.1.0",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.3.0",
@@ -54,14 +57,18 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "export:ios": "expo export --platform ios --output-dir dist/ios",
-    "export:android": "expo export --platform android --output-dir dist/android"
+    "export:android": "expo export --platform android --output-dir dist/android",
+    "e2e": "playwright test",
+    "e2e:shots": "SHOTS=1 playwright test",
+    "e2e:report": "playwright show-report"
   },
   "private": true,
   "jest": {
     "preset": "jest-expo",
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "/dist/"
+      "/dist/",
+      "/e2e/"
     ],
     "setupFiles": [
       "./jest.setup.ts"

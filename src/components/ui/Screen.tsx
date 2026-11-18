@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, typography } from '@/theme/tokens';
+import { size, space, typography } from '@/theme/tokens';
+import { useThemedStyles, type ThemeColors } from '@/theme/useTheme';
 import { OfflineBanner } from './OfflineBanner';
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function Screen({ title, subtitle, children, scroll = true, topInset = false }: Props) {
+  const styles = useThemedStyles(createStyles);
   const edges = topInset ? (['top', 'bottom', 'left', 'right'] as const) : (['bottom', 'left', 'right'] as const);
   const body = (
     <View style={styles.content}>
@@ -43,10 +45,11 @@ export function Screen({ title, subtitle, children, scroll = true, topInset = fa
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
-  scroll: { flexGrow: 1 },
-  content: { flex: 1, padding: spacing.lg, gap: spacing.md, width: '100%', maxWidth: 560, alignSelf: 'center' },
-  title: { ...typography.title, color: colors.text },
-  subtitle: { ...typography.body, color: colors.muted },
-});
+const createStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: c.background },
+    scroll: { flexGrow: 1 },
+    content: { flex: 1, padding: space[6], gap: space[4], width: '100%', maxWidth: size.formMax, alignSelf: 'center' },
+    title: { ...typography.title, color: c.textPrimary },
+    subtitle: { ...typography.body, color: c.textMuted },
+  });

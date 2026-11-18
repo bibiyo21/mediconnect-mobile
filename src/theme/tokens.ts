@@ -1,34 +1,30 @@
 /**
- * Design tokens for the patient app. Move to @mediconnect/design-system once
- * a second app needs them.
+ * React Native adapter for @mediconnect/design-system (docs/design-system.md).
+ * Values live in the shared package; this file only reshapes them for StyleSheet.
+ * Colours are per colour scheme: read them through `useTheme()` / `useThemedStyles()` (./useTheme).
  */
-export const colors = {
-  background: '#F5F7F9',
-  surface: '#FFFFFF',
-  text: '#12212E',
-  muted: '#51606D',
-  primary: '#0B6E6E',
-  primaryText: '#FFFFFF',
-  border: '#D9E1E7',
-  danger: '#A4262C',
-  dangerSurface: '#FBEAEA',
-  warning: '#7A5B00',
-  warningSurface: '#FFF6D6',
-  success: '#1F6B3A',
-  successSurface: '#E7F5EC',
-} as const;
+import { breakpoints, motion, radius, shadow, size, space, typography as shared, zIndex, type ColorScheme, type TypographyToken } from '@mediconnect/design-system';
 
-export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
+export { breakpoints, motion, radius, size, space, zIndex };
+export type { ColorScheme };
 
-export const radius = { sm: 6, md: 10, lg: 16 } as const;
+type FontWeight = '400' | '600' | '700';
 
-export const typography = {
-  title: { fontSize: 26, fontWeight: '700' as const, lineHeight: 32 },
-  heading: { fontSize: 20, fontWeight: '600' as const, lineHeight: 26 },
-  body: { fontSize: 16, fontWeight: '400' as const, lineHeight: 22 },
-  label: { fontSize: 15, fontWeight: '600' as const, lineHeight: 20 },
-  small: { fontSize: 13, fontWeight: '400' as const, lineHeight: 18 },
-} as const;
+/** Spread into a text style: `{ ...typography.body, color }`. Letter spacing is converted from em to dp. */
+export const typography = Object.fromEntries(
+  (Object.entries(shared) as [TypographyToken, (typeof shared)[TypographyToken]][]).map(([name, t]) => [
+    name,
+    {
+      fontSize: t.fontSize,
+      lineHeight: t.lineHeight,
+      fontWeight: String(t.fontWeight) as FontWeight,
+      letterSpacing: Math.round(t.letterSpacing * t.fontSize * 100) / 100,
+    },
+  ]),
+) as Record<TypographyToken, { fontSize: number; lineHeight: number; fontWeight: FontWeight; letterSpacing: number }>;
 
-/** Minimum touch target (iOS HIG / Android: 44–48 pt). */
-export const touchTarget = 48;
+/** Overlay shadow for dialogs, menus and popovers. Dark mode relies on `surfaceElevated` instead. */
+export function overlayShadow(scheme: ColorScheme): { boxShadow?: string } {
+  const s = shadow.overlay[scheme];
+  return s ? { boxShadow: `${s.x}px ${s.y}px ${s.blur}px ${s.color}` } : {};
+}

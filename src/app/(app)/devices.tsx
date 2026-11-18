@@ -3,7 +3,8 @@ import { StyleSheet, Text } from 'react-native';
 import { Button, Card, Notice, Screen, StateView } from '@/components/ui';
 import { fetchDevices, signOutDevice, type Device } from '@/features/auth/api';
 import { userMessage } from '@/lib/errors';
-import { colors, typography } from '@/theme/tokens';
+import { typography } from '@/theme/tokens';
+import { useThemedStyles, type ThemeColors } from '@/theme/useTheme';
 
 const PLATFORM: Record<Device['platform'], string> = { IOS: 'iPhone', ANDROID: 'Android', WEB: 'Web browser' };
 
@@ -13,6 +14,7 @@ function formatDate(iso: string | null): string {
 }
 
 export default function Devices() {
+  const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
   const devices = useQuery({ queryKey: ['devices'], queryFn: fetchDevices });
   const revoke = useMutation({
@@ -50,7 +52,8 @@ export default function Devices() {
   );
 }
 
-const styles = StyleSheet.create({
-  meta: { ...typography.small, color: colors.muted },
-  current: { ...typography.label, color: colors.success },
-});
+const createStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    meta: { ...typography.small, color: c.textMuted },
+    current: { ...typography.label, color: c.success },
+  });

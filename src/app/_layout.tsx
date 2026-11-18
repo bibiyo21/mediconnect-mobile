@@ -5,12 +5,14 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/lib/queryClient';
 import { SessionProvider, useSession } from '@/features/session/SessionProvider';
-import { colors } from '@/theme/tokens';
+import { useTheme, useNavigationTheme } from '@/theme/useTheme';
 
 // Keep the splash screen up while the stored session is restored.
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 function RootNavigator() {
+  const { colors } = useTheme();
+  const nav = useNavigationTheme(colors);
   const { status } = useSession();
 
   useEffect(() => {
@@ -21,7 +23,7 @@ function RootNavigator() {
 
   const signedIn = status === 'signedIn';
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: nav.stack.contentStyle }}>
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>
@@ -37,7 +39,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
-          <StatusBar style="dark" />
+          <StatusBar style="auto" />
           <RootNavigator />
         </SessionProvider>
       </QueryClientProvider>

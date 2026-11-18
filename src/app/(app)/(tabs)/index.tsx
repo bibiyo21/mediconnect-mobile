@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text } from 'react-native';
 import { Card, Notice, Screen } from '@/components/ui';
 import { fetchMe } from '@/features/auth/api';
-import { colors, typography } from '@/theme/tokens';
+import { typography } from '@/theme/tokens';
+import { useThemedStyles, type ThemeColors } from '@/theme/useTheme';
 
 /**
  * Home shell. Each card names a feature that arrives with a later phase; none
@@ -16,6 +17,7 @@ const UPCOMING = [
 ] as const;
 
 export default function Home() {
+  const styles = useThemedStyles(createStyles);
   const me = useQuery({ queryKey: ['me'], queryFn: fetchMe });
   const name = me.data?.profile?.first_name;
 
@@ -32,7 +34,8 @@ export default function Home() {
   );
 }
 
-const styles = StyleSheet.create({
-  body: { ...typography.body, color: colors.text },
-  soon: { ...typography.small, color: colors.muted },
-});
+const createStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    body: { ...typography.body, color: c.textPrimary },
+    soon: { ...typography.small, color: c.textMuted },
+  });

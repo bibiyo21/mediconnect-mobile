@@ -1,9 +1,11 @@
 import { Stack } from 'expo-router';
-import { colors } from '@/theme/tokens';
+import { useNavigationTheme, useTheme } from '@/theme/useTheme';
 
 export default function AppLayout() {
+  const { colors } = useTheme();
+  const nav = useNavigationTheme(colors);
   return (
-    <Stack screenOptions={{ headerTintColor: colors.primary, headerBackButtonDisplayMode: 'minimal', contentStyle: { backgroundColor: colors.background } }}>
+    <Stack screenOptions={{ ...nav.stack, headerBackButtonDisplayMode: 'minimal' }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="devices" options={{ title: 'Signed-in devices' }} />
     </Stack>

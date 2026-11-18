@@ -1,11 +1,13 @@
 import { Stack } from 'expo-router';
 import { RegistrationDraftProvider } from '@/features/auth/RegistrationDraft';
-import { colors } from '@/theme/tokens';
+import { useNavigationTheme, useTheme } from '@/theme/useTheme';
 
 export default function AuthLayout() {
+  const { colors } = useTheme();
+  const nav = useNavigationTheme(colors);
   return (
     <RegistrationDraftProvider>
-      <Stack screenOptions={{ headerTintColor: colors.primary, headerBackButtonDisplayMode: 'minimal', contentStyle: { backgroundColor: colors.background } }}>
+      <Stack screenOptions={{ ...nav.stack, headerBackButtonDisplayMode: 'minimal' }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="sign-in" options={{ title: 'Sign in' }} />
         <Stack.Screen name="mfa" options={{ title: 'Two-step verification' }} />

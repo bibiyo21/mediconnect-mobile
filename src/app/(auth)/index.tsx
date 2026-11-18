@@ -2,9 +2,11 @@ import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button, Notice, Screen } from '@/components/ui';
 import { useSession } from '@/features/session/SessionProvider';
-import { colors, spacing, typography } from '@/theme/tokens';
+import { space, typography } from '@/theme/tokens';
+import { useThemedStyles, type ThemeColors } from '@/theme/useTheme';
 
 export default function Welcome() {
+  const styles = useThemedStyles(createStyles);
   const { signOutReason } = useSession();
   return (
     <Screen topInset>
@@ -24,10 +26,11 @@ export default function Welcome() {
   );
 }
 
-const styles = StyleSheet.create({
-  hero: { flex: 1, justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.xl },
-  brand: { ...typography.title, fontSize: 34, lineHeight: 40, color: colors.primary },
-  tagline: { ...typography.body, color: colors.muted },
-  actions: { gap: spacing.sm },
-  disclaimer: { ...typography.small, color: colors.muted, textAlign: 'center' },
-});
+const createStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    hero: { flex: 1, justifyContent: 'center', gap: space[2], paddingVertical: space[8] },
+    brand: { ...typography.display, color: c.primary },
+    tagline: { ...typography.body, color: c.textMuted },
+    actions: { gap: space[2] },
+    disclaimer: { ...typography.small, color: c.textMuted, textAlign: 'center' },
+  });

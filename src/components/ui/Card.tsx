@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, typography } from '@/theme/tokens';
+import { radius, size, space, typography } from '@/theme/tokens';
+import { useThemedStyles, type ThemeColors } from '@/theme/useTheme';
 
 export function Card({ title, children }: { title?: string; children: ReactNode }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.card}>
       {title ? (
@@ -15,7 +17,8 @@ export function Card({ title, children }: { title?: string; children: ReactNode 
   );
 }
 
-const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, gap: spacing.sm },
-  title: { ...typography.heading, color: colors.text },
-});
+const createStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    card: { backgroundColor: c.surface, borderRadius: radius.md, borderWidth: size.hairline, borderColor: c.border, padding: space[4], gap: space[2] },
+    title: { ...typography.heading, color: c.textPrimary },
+  });
