@@ -1,0 +1,2 @@
+# Expo + pnpm: hoisted node_modules so Metro and native autolinking find every package.
+nodeLinker: hoisted
