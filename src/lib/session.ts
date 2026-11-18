@@ -12,11 +12,13 @@ import { Platform } from 'react-native';
 import { tokenStore, type StoredSession } from './tokenStore';
 
 export type SessionStatus = 'restoring' | 'signedOut' | 'signedIn';
-export type SignOutReason = 'user' | 'expired' | null;
+export type SignOutReason = 'user' | 'expired' | 'deletionRequested' | null;
 
 export interface SessionState {
   status: SessionStatus;
   signOutReason: SignOutReason;
+  /** Shown with the reason, for example the date an account deletion takes effect. */
+  signOutDetail?: string;
 }
 
 export interface IssuedTokens {
@@ -80,14 +82,14 @@ export class SessionManager {
     this.setState({ status: 'signedIn', signOutReason: null });
   }
 
-  async signOut(reason: SignOutReason = 'user'): Promise<void> {
+  async signOut(reason: SignOutReason = 'user', detail?: string): Promise<void> {
     this.generation += 1;
     this.accessToken = null;
     this.stored = null;
     if (this.mode === 'token') {
       await this.store.clear();
     }
-    this.setState({ status: 'signedOut', signOutReason: reason });
+    this.setState({ status: 'signedOut', signOutReason: reason, ...(detail ? { signOutDetail: detail } : {}) });
   }
 
   /**

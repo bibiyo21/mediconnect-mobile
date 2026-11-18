@@ -181,3 +181,11 @@ describe('SessionManager (web cookie mode)', () => {
     expect(store.save).not.toHaveBeenCalled();
   });
 });
+
+describe('sign-out detail', () => {
+  it('carries a detail such as the deletion date with the reason', async () => {
+    const session = new SessionManager(API, jest.fn(), memoryStore(), 'token');
+    await session.signOut('deletionRequested', '2026-12-18T03:00:00Z');
+    expect(session.getState()).toEqual({ status: 'signedOut', signOutReason: 'deletionRequested', signOutDetail: '2026-12-18T03:00:00Z' });
+  });
+});

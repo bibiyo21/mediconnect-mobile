@@ -14,6 +14,7 @@ export default function AppLayout() {
       <Stack.Screen name="family/index" options={{ title: 'Family members' }} />
       <Stack.Screen name="family/new" options={{ title: 'Add a family member' }} />
       <Stack.Screen name="family/[id]" options={{ title: 'Family member' }} />
+      <Stack.Screen name="delete-account" options={{ title: 'Delete your account' }} />
     </Stack>
   );
 }

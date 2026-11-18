@@ -70,6 +70,9 @@ export async function mockApi(page: Page, { signedIn }: { signedIn: boolean }): 
     if (method === 'PATCH') return route.fulfill(ok({ ...dependents[0], ...(route.request().postDataJSON() as object) }));
     return route.fulfill(ok(dependents[0]));
   });
+  await page.route('**/api/v1/auth/account/deletion-request', (route) =>
+    route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ success: true, data: { deletion_scheduled_for: '2026-12-18T03:00:00Z' }, meta: {}, message: 'Your account is scheduled for deletion. Sign in before then to keep it.' }) }),
+  );
   await page.route('**/api/v1/auth/contact/otp', (route) =>
     route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ success: true, data: { challenge_id: '01a1ec01-0000-7000-8000-0000000000c2', channel: 'SMS', destination_masked: '+63•••••••4567', expires_at: '2026-11-18T00:30:00Z' }, meta: {}, message: 'If the address can receive a code, one has been sent.' }) }),
   );

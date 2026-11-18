@@ -1,10 +1,10 @@
-import { confirmContactChange, register, requestContactChangeCode, requestPasswordResetCode, resetPassword, signIn } from '../api';
+import { confirmContactChange, requestAccountDeletion, register, requestContactChangeCode, requestPasswordResetCode, resetPassword, signIn } from '../api';
 import { api, session } from '@/lib/api';
 
 jest.mock('@/lib/api', () => ({
   api: { POST: jest.fn(), PUT: jest.fn() },
   prepareWrites: jest.fn(async () => undefined),
-  session: { signIn: jest.fn(async () => undefined) },
+  session: { signIn: jest.fn(async () => undefined), signOut: jest.fn(async () => undefined) },
 }));
 
 const user = { id: 'u1', email: 'a@example.test', mobile_masked: null, email_verified: true, mobile_verified: false, status: 'ACTIVE', locale: 'en', roles: ['PATIENT'], profile: null };
@@ -148,5 +148,24 @@ describe('contact change', () => {
       { email: 'new@example.test', verification_token: 'k'.repeat(64) },
       { email: 'new@example.test', verification_token: 'k'.repeat(64) },
     ]);
+  });
+});
+
+describe('account deletion', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('sends the password and ends the local session with the deletion date', async () => {
+    jest.mocked(api.POST).mockResolvedValue({ data: { success: true, data: { deletion_scheduled_for: '2026-12-18T03:00:00Z' } }, response: new Response(null, { status: 202 }) } as never);
+
+    await expect(requestAccountDeletion('my-password-1')).resolves.toBe('2026-12-18T03:00:00Z');
+    expect(jest.mocked(api.POST).mock.calls[0]).toEqual(['/auth/account/deletion-request', { body: { current_password: 'my-password-1' } }]);
+    expect(session.signOut).toHaveBeenCalledWith('deletionRequested', '2026-12-18T03:00:00Z');
+  });
+
+  it('keeps the session when the password is wrong', async () => {
+    jest.mocked(api.POST).mockResolvedValue({ error: { success: false, message: 'Validation failed', code: 'VALIDATION_FAILED', errors: { current_password: ['The password is incorrect.'] } }, response: new Response(null, { status: 422 }) } as never);
+
+    await expect(requestAccountDeletion('wrong')).rejects.toThrow('Validation failed');
+    expect(session.signOut).not.toHaveBeenCalled();
   });
 });

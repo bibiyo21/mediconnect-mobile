@@ -40,6 +40,7 @@ export default function Account() {
       </Card>
       <Card title="Security">
         <Button label="Signed-in devices" variant="secondary" onPress={() => router.push('/devices')} />
+        <LinkButton label="Delete my account" onPress={() => router.push('/delete-account')} />
       </Card>
       {logout.isError ? <Notice tone="error" message="You are signed out on this device. We could not reach the server to end the session there." /> : null}
       <Button label="Sign out" variant="danger" onPress={() => logout.mutate()} loading={logout.isPending} />

@@ -200,6 +200,17 @@ export async function signOutDevice(deviceId: string): Promise<void> {
   unwrap(await api.DELETE('/auth/devices/{deviceId}', { params: { path: { deviceId } } }));
 }
 
+/**
+ * Requests account deletion (D-38). The server signs out every device at
+ * once; locally the session ends with the deletion date to show on sign-in.
+ */
+export async function requestAccountDeletion(currentPassword: string): Promise<string> {
+  await prepareWrites();
+  const data = unwrap(await api.POST('/auth/account/deletion-request', { body: { current_password: currentPassword } }));
+  await session.signOut('deletionRequested', data.deletion_scheduled_for);
+  return data.deletion_scheduled_for;
+}
+
 /** Ends the session on the server, then locally even if the server call fails. */
 export async function signOut(): Promise<void> {
   try {

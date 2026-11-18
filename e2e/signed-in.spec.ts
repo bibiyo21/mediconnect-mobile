@@ -8,6 +8,7 @@ const screens = [
   { path: '/profile', heading: 'Your profile' },
   { path: '/contact?kind=mobile', heading: 'Your mobile number' },
   { path: '/family', heading: 'Family members' },
+  { path: '/delete-account', heading: 'Delete your account' },
   { path: '/family/new', heading: 'Add a family member' },
   { path: '/family/01a1ec01-0000-7000-8000-0000000000d1', heading: 'Lia Reyes' },
 ] as const;
@@ -124,4 +125,26 @@ test('removing a family member asks for confirmation and says records are kept',
   const request = page.waitForRequest((r) => r.method() === 'DELETE');
   await page.getByRole('button', { name: 'Yes, remove Lia' }).click();
   expect((await request).url()).toContain('/api/v1/patients/me/dependents/01a1ec01-0000-7000-8000-0000000000d1');
+});
+
+test('deleting the account needs confirmation and the password, then shows the deletion date on the welcome screen', async ({ page }) => {
+  await mockApi(page, { signedIn: true });
+  await page.goto('/account');
+  await page.getByRole('link', { name: 'Delete my account' }).click({ timeout: 45_000 });
+  await expect(page.getByRole('heading', { name: 'Delete your account', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Delete my account' }).click();
+  await expect(page.getByText('Confirm that you understand what happens to your account.')).toBeVisible();
+
+  await page.getByRole('checkbox').click();
+  await page.getByLabel('Password', { exact: true }).fill('Correct-horse-42');
+  const request = page.waitForRequest((r) => r.url().endsWith('/api/v1/auth/account/deletion-request'));
+  // After the request the server no longer recognises the session.
+  await page.unroute('**/api/v1/auth/me');
+  await page.route('**/api/v1/auth/me', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Unauthenticated.', errors: {}, code: 'UNAUTHENTICATED' }) }));
+  await page.getByRole('button', { name: 'Delete my account' }).click();
+
+  expect((await request).postDataJSON()).toEqual({ current_password: 'Correct-horse-42' });
+  await expect(page.getByText(/scheduled for deletion on 18 December 2026/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
 });
