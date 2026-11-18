@@ -5,6 +5,7 @@ const screens = [
   { path: '/', heading: 'Hello, Ana' },
   { path: '/account', heading: 'Account' },
   { path: '/devices', heading: 'Signed-in devices' },
+  { path: '/profile', heading: 'Your profile' },
 ] as const;
 
 for (const s of screens) {
@@ -36,4 +37,29 @@ test('devices names this device once, without a repeated subtitle', async ({ pag
   await page.goto('/devices');
   await expect(page.getByText('This device')).toBeVisible({ timeout: 45_000 });
   await expect(page.getByText('Web browser')).toHaveCount(1);
+});
+
+test('profile edit validates, then sends only the PATCH body the API expects', async ({ page }) => {
+  await mockApi(page, { signedIn: true });
+  await page.goto('/profile');
+  await expect(page.getByLabel('First name')).toHaveValue('Ana', { timeout: 45_000 });
+
+  await page.getByLabel('Name', { exact: true }).fill('Jose Reyes');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Add a mobile number for your emergency contact.')).toBeVisible();
+
+  await page.getByLabel('Mobile number').fill('0917 765 4321');
+  await page.getByRole('radio', { name: 'Filipino' }).click();
+  const request = page.waitForRequest((r) => r.url().endsWith('/api/v1/patients/me') && r.method() === 'PATCH');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+
+  const body = (await request).postDataJSON();
+  expect(body).toMatchObject({ first_name: 'Ana', preferred_language: 'fil', emergency_contact: { name: 'Jose Reyes', phone: '09177654321' }, address: null });
+});
+
+test('account links to profile editing', async ({ page }) => {
+  await mockApi(page, { signedIn: true });
+  await page.goto('/account');
+  await page.getByRole('button', { name: 'Edit profile' }).click({ timeout: 45_000 });
+  await expect(page.getByRole('heading', { name: 'Your profile', exact: true })).toBeVisible();
 });

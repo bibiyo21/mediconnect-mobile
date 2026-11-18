@@ -24,6 +24,18 @@ const account = {
   profile: { first_name: 'Ana', middle_name: null, last_name: 'Reyes' },
 };
 
+export const patientProfile = {
+  id: '01a1ec01-0000-7000-8000-0000000000p1',
+  first_name: 'Ana',
+  middle_name: null,
+  last_name: 'Reyes',
+  date_of_birth: '1990-05-17',
+  sex: null,
+  preferred_language: 'en',
+  emergency_contact: null,
+  address: null,
+};
+
 const ok = (data: unknown) => ({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data, meta: {}, message: null }) });
 
 /**
@@ -38,6 +50,12 @@ export async function mockApi(page: Page, { signedIn }: { signedIn: boolean }): 
   await page.route('**/api/v1/auth/devices', (route) =>
     route.fulfill(ok([{ id: 'd1', platform: 'WEB', device_name: null, app_version: null, last_seen_at: '2026-11-18T00:15:00Z', created_at: '2026-11-18T00:14:00Z', current: true }])),
   );
+  await page.route('**/api/v1/patients/me', (route) => {
+    if (route.request().method() === 'PATCH') {
+      return route.fulfill(ok({ ...patientProfile, ...(route.request().postDataJSON() as object) }));
+    }
+    return route.fulfill(ok(patientProfile));
+  });
   await page.route('**/api/v1/auth/otp/verify', (route) => route.fulfill(ok({ verification_token: 'v'.repeat(64), expires_in_minutes: 10 })));
   await page.route('**/api/v1/auth/reset-password', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: {}, meta: {}, message: 'Your password was changed.' }) }),

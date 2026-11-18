@@ -8,6 +8,7 @@ export default function AppLayout() {
     <Stack screenOptions={{ ...nav.stack, headerBackButtonDisplayMode: 'minimal' }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="devices" options={{ title: 'Signed-in devices' }} />
+      <Stack.Screen name="profile" options={{ title: 'Your profile' }} />
     </Stack>
   );
 }

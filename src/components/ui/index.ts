@@ -8,3 +8,4 @@ export { ResendCodeButton } from './ResendCodeButton';
 export { Screen } from './Screen';
 export { StateView } from './StateView';
 export { TextField } from './TextField';
+export { ChoiceGroup } from './ChoiceGroup';

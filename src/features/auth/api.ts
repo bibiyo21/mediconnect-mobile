@@ -140,7 +140,7 @@ export interface RegistrationInput {
   first_name: string;
   middle_name?: string;
   last_name: string;
-  date_of_birth?: string;
+  date_of_birth: string;
   password: string;
   password_confirmation: string;
 }
@@ -153,7 +153,7 @@ export async function register(input: RegistrationInput): Promise<SignInResult> 
     first_name: input.first_name,
     middle_name: input.middle_name || null,
     last_name: input.last_name,
-    date_of_birth: input.date_of_birth || null,
+    date_of_birth: input.date_of_birth,
     password: input.password,
     password_confirmation: input.password_confirmation,
     // The versions the app displayed (config.ts); the server refuses stale ones.

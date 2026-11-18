@@ -8,6 +8,7 @@ import { Button, Checkbox, Notice, Screen, TextField } from '@/components/ui';
 import { register } from '@/features/auth/api';
 import { useRegistrationDraft } from '@/features/auth/RegistrationDraft';
 import { LEGAL_VERSIONS } from '@/lib/config';
+import { birthDateAutoComplete } from '@/lib/device';
 import { applyServerErrors } from '@/lib/forms';
 import { detailsSchema, formatDateInput, type DetailsForm } from '@/lib/validation';
 import { typography } from '@/theme/tokens';
@@ -70,7 +71,7 @@ export default function RegisterDetails() {
       {text('first_name', 'First name', { autoComplete: 'given-name', textContentType: 'givenName' })}
       {text('middle_name', 'Middle name (optional)', { autoComplete: 'additional-name', textContentType: 'middleName' })}
       {text('last_name', 'Last name', { autoComplete: 'family-name', textContentType: 'familyName' })}
-      {text('date_of_birth', 'Date of birth (optional)', { hint: 'Year, month, day. For example 1990-05-17.', placeholder: 'YYYY-MM-DD', autoComplete: 'birthdate-full', keyboardType: 'number-pad', maxLength: 10 })}
+      {text('date_of_birth', 'Date of birth', { hint: 'Year, month, day. For example 1990-05-17. You must be 18 or older.', placeholder: 'YYYY-MM-DD', autoComplete: birthDateAutoComplete, keyboardType: 'number-pad', maxLength: 10 })}
       <Controller
         control={control}
         name="password"

@@ -10,7 +10,7 @@ jest.mock('@/lib/api', () => ({
 const user = { id: 'u1', email: 'a@example.test', mobile_masked: null, email_verified: true, mobile_verified: false, status: 'ACTIVE', locale: 'en', roles: ['PATIENT'], profile: null };
 const ok = (data: unknown, status = 200) => ({ data: { success: true, data }, response: new Response(null, { status }) });
 
-const registration = { contact: 'a@example.test', verificationToken: 't', first_name: 'A', last_name: 'B', password: 'abcdefgh12', password_confirmation: 'abcdefgh12' };
+const registration = { contact: 'a@example.test', verificationToken: 't', first_name: 'A', last_name: 'B', date_of_birth: '1990-05-17', password: 'abcdefgh12', password_confirmation: 'abcdefgh12' };
 
 describe('auth api', () => {
   beforeEach(() => jest.clearAllMocks());

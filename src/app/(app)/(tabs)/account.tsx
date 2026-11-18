@@ -31,7 +31,8 @@ export default function Account() {
           <Row label="Name" value={[me.data.profile?.first_name, me.data.profile?.middle_name, me.data.profile?.last_name].filter(Boolean).join(' ') || 'Not set'} />
           <Row label="Email" value={me.data.email ? `${me.data.email}${me.data.email_verified ? ' (verified)' : ' (not verified)'}` : 'Not added'} />
           <Row label="Mobile" value={me.data.mobile_masked ? `${me.data.mobile_masked}${me.data.mobile_verified ? ' (verified)' : ' (not verified)'}` : 'Not added'} />
-          <Text style={styles.note}>Editing your profile and adding dependents arrive in a later update.</Text>
+          <Button label="Edit profile" variant="secondary" onPress={() => router.push('/profile')} />
+          <Text style={styles.note}>Adding family members as dependents arrives in a later update.</Text>
         </Card>
       ) : null}
       <Card title="Security">
