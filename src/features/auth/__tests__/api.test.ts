@@ -1,8 +1,8 @@
-import { register, requestPasswordResetCode, resetPassword, signIn } from '../api';
+import { confirmContactChange, register, requestContactChangeCode, requestPasswordResetCode, resetPassword, signIn } from '../api';
 import { api, session } from '@/lib/api';
 
 jest.mock('@/lib/api', () => ({
-  api: { POST: jest.fn() },
+  api: { POST: jest.fn(), PUT: jest.fn() },
   prepareWrites: jest.fn(async () => undefined),
   session: { signIn: jest.fn(async () => undefined) },
 }));
@@ -119,5 +119,34 @@ describe('password reset', () => {
 
     await expect(resetPassword({ contact: 'a@example.test', challengeId: 'c1', code: '000000', password: 'abcdefgh12', password_confirmation: 'abcdefgh12' })).rejects.toThrow('The code is invalid.');
     expect(api.POST).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('contact change', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('sends the new mobile (normalised) with the current password', async () => {
+    jest.mocked(api.POST).mockResolvedValue({ data: { success: true, data: { challenge_id: 'c1', channel: 'SMS', destination_masked: '•••4567', expires_at: 'x' } }, response: new Response(null, { status: 202 }) } as never);
+
+    await requestContactChangeCode('0918 123 4567', 'my-password-1');
+    expect(jest.mocked(api.POST).mock.calls[0]).toEqual(['/auth/contact/otp', { body: { mobile: '09181234567', current_password: 'my-password-1' } }]);
+  });
+
+  it('verifies once and reuses the token when saving is retried', async () => {
+    const clash = { error: { success: false, message: 'Validation failed', code: 'VALIDATION_FAILED', errors: { email: ['This address cannot be used.'] } }, response: new Response(null, { status: 422 }) };
+    jest.mocked(api.POST).mockResolvedValueOnce(ok({ verification_token: 'k'.repeat(64), expires_in_minutes: 10 }) as never);
+    jest.mocked(api.PUT).mockResolvedValueOnce(clash as never).mockResolvedValueOnce(ok(user) as never);
+    const verified = {};
+    const input = { contact: 'new@example.test', challengeId: 'c1', code: '123456' };
+
+    await expect(confirmContactChange(input, verified)).rejects.toThrow('Validation failed');
+    await expect(confirmContactChange(input, verified)).resolves.toEqual(user);
+
+    expect(api.POST).toHaveBeenCalledTimes(1);
+    const puts = jest.mocked(api.PUT).mock.calls as unknown as [string, { body: Record<string, unknown> }][];
+    expect(puts.map((c) => c[1].body)).toEqual([
+      { email: 'new@example.test', verification_token: 'k'.repeat(64) },
+      { email: 'new@example.test', verification_token: 'k'.repeat(64) },
+    ]);
   });
 });

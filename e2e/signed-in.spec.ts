@@ -6,6 +6,7 @@ const screens = [
   { path: '/account', heading: 'Account' },
   { path: '/devices', heading: 'Signed-in devices' },
   { path: '/profile', heading: 'Your profile' },
+  { path: '/contact?kind=mobile', heading: 'Your mobile number' },
 ] as const;
 
 for (const s of screens) {
@@ -62,4 +63,33 @@ test('account links to profile editing', async ({ page }) => {
   await page.goto('/account');
   await page.getByRole('button', { name: 'Edit profile' }).click({ timeout: 45_000 });
   await expect(page.getByRole('heading', { name: 'Your profile', exact: true })).toBeVisible();
+});
+
+test('adding a mobile number: password and new number, then the code, then back to the account', async ({ page }) => {
+  await mockApi(page, { signedIn: true });
+  await page.goto('/account');
+  await page.getByRole('link', { name: 'Add a mobile number' }).click({ timeout: 45_000 });
+  await expect(page.getByRole('heading', { name: 'Your mobile number', exact: true })).toBeVisible();
+
+  await page.getByLabel('New mobile number').fill('0918 123 4567');
+  await page.getByLabel('Current password', { exact: true }).fill('Correct-horse-42');
+  const codeRequest = page.waitForRequest((r) => r.url().endsWith('/api/v1/auth/contact/otp'));
+  await page.getByRole('button', { name: 'Send code' }).click();
+  expect((await codeRequest).postDataJSON()).toEqual({ mobile: '09181234567', current_password: 'Correct-horse-42' });
+
+  await expect(page.getByRole('heading', { name: 'Enter your code', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Send a new code in/ })).toBeDisabled();
+  await page.getByLabel('6-digit code').fill('123456');
+  const save = page.waitForRequest((r) => r.url().endsWith('/api/v1/auth/contact') && r.method() === 'PUT');
+  await page.getByRole('button', { name: 'Save new mobile number' }).click();
+  expect((await save).postDataJSON()).toEqual({ mobile: '09181234567', verification_token: 'v'.repeat(64) });
+  await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
+});
+
+test('pushed screens name the back link after the app, not the route group', async ({ page }) => {
+  await mockApi(page, { signedIn: true });
+  await page.goto('/account');
+  await page.getByRole('button', { name: 'Edit profile' }).click({ timeout: 45_000 });
+  await expect(page.getByRole('link', { name: /MediConnect, back/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /\(tabs\)/ })).toHaveCount(0);
 });

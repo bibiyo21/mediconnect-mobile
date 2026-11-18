@@ -6,9 +6,11 @@ export default function AppLayout() {
   const nav = useNavigationTheme(colors);
   return (
     <Stack screenOptions={{ ...nav.stack, headerBackButtonDisplayMode: 'minimal' }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      {/* The title names the back link on pushed screens ("MediConnect, back"), not the route group. */}
+      <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'MediConnect' }} />
       <Stack.Screen name="devices" options={{ title: 'Signed-in devices' }} />
       <Stack.Screen name="profile" options={{ title: 'Your profile' }} />
+      <Stack.Screen name="contact" options={{ title: 'Contact details' }} />
     </Stack>
   );
 }

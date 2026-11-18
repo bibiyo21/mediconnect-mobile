@@ -128,6 +128,35 @@ export async function resetPassword(
   }
 }
 
+/** Step 1 of a contact change: the current password, then a code to the new address. */
+export async function requestContactChangeCode(contact: string, currentPassword: string): Promise<OtpChallenge> {
+  await prepareWrites();
+  return unwrap(await api.POST('/auth/contact/otp', { body: { ...contactField(contact), current_password: currentPassword } })) as OtpChallenge;
+}
+
+/**
+ * Step 2: verifies the code (once; a retry reuses the token, see VerifiedCode)
+ * and puts the new address on the account. Other devices are signed out.
+ */
+export async function confirmContactChange(input: { contact: string; challengeId: string; code: string }, verified: VerifiedCode = {}): Promise<Account> {
+  const key = `${input.challengeId}:${input.code.trim()}`;
+  if (verified.key !== key || !verified.token) {
+    verified.token = await verifyCode(input.challengeId, input.code.trim());
+    verified.key = key;
+  }
+
+  await prepareWrites();
+  try {
+    return unwrap(await api.PUT('/auth/contact', { body: { ...contactField(input.contact), verification_token: verified.token } }));
+  } catch (error) {
+    if (error instanceof ApiError && 'verification_token' in error.errors) {
+      verified.key = undefined;
+      verified.token = undefined;
+    }
+    throw error;
+  }
+}
+
 export async function verifyCode(challengeId: string, code: string): Promise<string> {
   await prepareWrites();
   const data = unwrap(await api.POST('/auth/otp/verify', { body: { challenge_id: challengeId, code } }));

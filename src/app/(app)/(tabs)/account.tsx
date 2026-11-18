@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
-import { Button, Card, Notice, Screen, StateView } from '@/components/ui';
+import { Button, Card, LinkButton, Notice, Screen, StateView } from '@/components/ui';
 import { fetchMe, signOut } from '@/features/auth/api';
 import { userMessage } from '@/lib/errors';
 import { space, typography } from '@/theme/tokens';
@@ -30,7 +30,9 @@ export default function Account() {
         <Card title="Your details">
           <Row label="Name" value={[me.data.profile?.first_name, me.data.profile?.middle_name, me.data.profile?.last_name].filter(Boolean).join(' ') || 'Not set'} />
           <Row label="Email" value={me.data.email ? `${me.data.email}${me.data.email_verified ? ' (verified)' : ' (not verified)'}` : 'Not added'} />
+          <LinkButton label={me.data.email ? 'Change email address' : 'Add an email address'} onPress={() => router.push({ pathname: '/contact', params: { kind: 'email' } })} />
           <Row label="Mobile" value={me.data.mobile_masked ? `${me.data.mobile_masked}${me.data.mobile_verified ? ' (verified)' : ' (not verified)'}` : 'Not added'} />
+          <LinkButton label={me.data.mobile_masked ? 'Change mobile number' : 'Add a mobile number'} onPress={() => router.push({ pathname: '/contact', params: { kind: 'mobile' } })} />
           <Button label="Edit profile" variant="secondary" onPress={() => router.push('/profile')} />
           <Text style={styles.note}>Adding family members as dependents arrives in a later update.</Text>
         </Card>
