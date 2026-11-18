@@ -82,6 +82,55 @@ describe('SessionManager (native token mode)', () => {
     expect(store.current).toEqual({ refreshToken: 'r', deviceId: 'd' });
   });
 
+  it.each([429, 500, 503])('keeps the session and the stored token when the refresh gets a %i', async (status) => {
+    const store = memoryStore();
+    const baseFetch = jest.fn(async (req: Request) => (req.url.endsWith('/auth/refresh') ? json(status, {}) : json(401, {})));
+    const session = new SessionManager(API, baseFetch, store, 'token');
+    await session.signIn({ access_token: 'a', refresh_token: 'r', device_id: 'd' });
+
+    const response = await session.fetch(new Request(`${API}/auth/me`));
+
+    expect(response.status).toBe(401);
+    expect(session.getState().status).toBe('signedIn');
+    expect(store.current).toEqual({ refreshToken: 'r', deviceId: 'd' });
+  });
+
+  it('keeps the session when the refresh response is not JSON (e.g. a proxy error page)', async () => {
+    const store = memoryStore();
+    const baseFetch = jest.fn(async (req: Request) => (req.url.endsWith('/auth/refresh') ? new Response('<html>Bad gateway</html>', { status: 200 }) : json(401, {})));
+    const session = new SessionManager(API, baseFetch, store, 'token');
+    await session.signIn({ access_token: 'a', refresh_token: 'r', device_id: 'd' });
+
+    await expect(session.fetch(new Request(`${API}/auth/me`))).resolves.toHaveProperty('status', 401);
+    expect(session.getState().status).toBe('signedIn');
+    expect(store.current).toEqual({ refreshToken: 'r', deviceId: 'd' });
+  });
+
+  it('discards a refresh that finishes after the user signed out (nothing written back to secure storage)', async () => {
+    const store = memoryStore();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const baseFetch = jest.fn(async (req: Request) => {
+      if (req.url.endsWith('/auth/refresh')) {
+        await gate;
+        return refreshed(1);
+      }
+      return json(401, {});
+    });
+    const session = new SessionManager(API, baseFetch, store, 'token');
+    await session.signIn({ access_token: 'access-0', refresh_token: 'refresh-0', device_id: 'device-1' });
+
+    const pending = session.fetch(new Request(`${API}/auth/me`));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await session.signOut('user');
+    release();
+    await pending;
+
+    expect(session.getState()).toEqual({ status: 'signedOut', signOutReason: 'user' });
+    expect(store.current).toBeNull();
+    expect(baseFetch).toHaveBeenCalledTimes(2); // the request and the refresh; no retry with the discarded token
+  });
+
   it('never refreshes on a failed login (no retry loop on auth endpoints)', async () => {
     const baseFetch = jest.fn(async () => json(401, {}));
     const session = new SessionManager(API, baseFetch, memoryStore(), 'token');

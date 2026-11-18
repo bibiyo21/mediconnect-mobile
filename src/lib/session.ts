@@ -34,6 +34,8 @@ export class SessionManager {
   private accessToken: string | null = null;
   private stored: StoredSession | null = null;
   private refreshing: Promise<boolean> | null = null;
+  /** Bumped on every sign-in and sign-out; a refresh that started before one is discarded. */
+  private generation = 0;
   private readonly listeners = new Set<Listener>();
 
   constructor(
@@ -67,6 +69,7 @@ export class SessionManager {
 
   /** After login, registration or MFA verification. */
   async signIn(tokens: IssuedTokens | null): Promise<void> {
+    this.generation += 1;
     if (this.mode === 'token' && tokens) {
       this.accessToken = tokens.access_token;
       this.stored = tokens.refresh_token ? { refreshToken: tokens.refresh_token, deviceId: tokens.device_id } : null;
@@ -78,6 +81,7 @@ export class SessionManager {
   }
 
   async signOut(reason: SignOutReason = 'user'): Promise<void> {
+    this.generation += 1;
     this.accessToken = null;
     this.stored = null;
     if (this.mode === 'token') {
@@ -121,6 +125,9 @@ export class SessionManager {
   private async doRefresh(): Promise<boolean> {
     const current = this.stored;
     if (!current) return false;
+    const generation = this.generation;
+    // The user signed out or in while this refresh was running: drop its result.
+    const superseded = () => generation !== this.generation;
 
     let response: Response;
     try {
@@ -136,13 +143,28 @@ export class SessionManager {
       return false;
     }
 
-    if (!response.ok) {
-      // Expired, revoked or reused: the session is over.
+    if (superseded()) return false;
+
+    if (response.status === 401 || response.status === 422) {
+      // Expired, revoked or reused (401), or a stored token the server cannot accept (422): the session is over.
       await this.signOut('expired');
       return false;
     }
 
-    const body = (await response.json()) as { data?: { tokens?: { access_token?: string; refresh_token?: string }; device_id?: string } };
+    if (!response.ok) {
+      // Rate limited (429) or a server problem (5xx): the token is still good; keep the session and try again later.
+      return false;
+    }
+
+    let body: { data?: { tokens?: { access_token?: string; refresh_token?: string }; device_id?: string } };
+    try {
+      body = await response.json();
+    } catch {
+      // Not the API's JSON (e.g. a proxy error page): treat as a temporary failure.
+      return false;
+    }
+    if (superseded()) return false;
+
     const tokens = body.data?.tokens;
     if (!tokens?.access_token || !tokens.refresh_token) {
       await this.signOut('expired');

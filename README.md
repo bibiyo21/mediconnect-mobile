@@ -66,8 +66,9 @@ Only public values go in `EXPO_PUBLIC_*`. They are compiled into the bundle and 
   - On a cold start, the stored refresh token restores the session behind the splash screen. The first request then refreshes the access token.
 - **Refresh is single-flight.** Every refresh token works once, and the server treats reuse as theft. So when several requests get a 401 at the same time, they all wait for one refresh, then each retries once (`src/lib/session.ts`).
 - **Refresh failure:**
-  - If the refresh is rejected, the token is cleared and the user is signed out with the reason `expired`. The welcome screen then shows "Your session ended".
-  - If the device is offline, the session is kept and the next request tries again.
+  - Only a rejection ends the session: a 401 (expired, revoked or reused token) or a 422 (a stored token the server can't accept). The token is cleared and the user is signed out with the reason `expired`. The welcome screen then shows "Your session ended".
+  - A rate limit (429), a server error (5xx), a response that isn't the API's JSON, or no connection keeps the session and the stored token. The next request tries again.
+  - A refresh that finishes after the user signed out (or in again) is discarded and never written back to SecureStore.
 - **Auth endpoints never retry:** a 401 from login, register, refresh or MFA verify does not trigger refresh-and-retry.
 - **Web build:** the Sanctum session cookie (HttpOnly) plus `X-XSRF-TOKEN`. Nothing is written to `localStorage` or `sessionStorage`.
 - **Sign-out** (by the user or on expiry) clears the React Query cache, so no account data outlives the session.
