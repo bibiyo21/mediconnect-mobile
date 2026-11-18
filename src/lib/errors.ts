@@ -5,7 +5,7 @@ export function userMessage(error: unknown): string {
   if (error instanceof ApiError) {
     switch (error.code) {
       case 'RATE_LIMITED':
-        return 'Too many attempts. Please wait a minute and try again.';
+        return 'Too many attempts. Please wait a few minutes and try again.';
       case 'DEPENDENCY_UNAVAILABLE':
       case 'SERVER_ERROR':
         return 'Something went wrong on our side. Please try again.';

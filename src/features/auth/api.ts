@@ -2,7 +2,7 @@
  * Auth calls, all against endpoints that exist in the backend contract
  * (openapi/openapi.json). Nothing here invents an endpoint.
  */
-import { unwrap, type components } from '@mediconnect/api-client';
+import { ApiError, unwrap, type components } from '@mediconnect/api-client';
 import Constants from 'expo-constants';
 import { api, prepareWrites, session } from '@/lib/api';
 import { LEGAL_VERSIONS } from '@/lib/config';
@@ -90,15 +90,42 @@ export async function requestPasswordResetCode(contact: string): Promise<OtpChal
   return unwrap(await api.POST('/auth/forgot-password', { body: contactField(contact) })) as OtpChallenge;
 }
 
+/**
+ * Remembers the verification token of a code that was already checked. The
+ * server accepts each code once, so a retry after a failed reset (for example a
+ * password found in a data breach) must reuse the token, not the code.
+ */
+export interface VerifiedCode {
+  key?: string;
+  token?: string;
+}
+
 /** Verifies the emailed or texted code, then sets the new password (two calls, one user action). */
-export async function resetPassword(input: { contact: string; challengeId: string; code: string; password: string; password_confirmation: string }): Promise<void> {
-  const verificationToken = await verifyCode(input.challengeId, input.code);
+export async function resetPassword(
+  input: { contact: string; challengeId: string; code: string; password: string; password_confirmation: string },
+  verified: VerifiedCode = {},
+): Promise<void> {
+  const key = `${input.challengeId}:${input.code.trim()}`;
+  if (verified.key !== key || !verified.token) {
+    verified.token = await verifyCode(input.challengeId, input.code.trim());
+    verified.key = key;
+  }
+
   await prepareWrites();
-  unwrap(
-    await api.POST('/auth/reset-password', {
-      body: { ...contactField(input.contact), verification_token: verificationToken, password: input.password, password_confirmation: input.password_confirmation },
-    }),
-  );
+  try {
+    unwrap(
+      await api.POST('/auth/reset-password', {
+        body: { ...contactField(input.contact), verification_token: verified.token, password: input.password, password_confirmation: input.password_confirmation },
+      }),
+    );
+  } catch (error) {
+    // An expired or rejected token cannot be retried: the next attempt checks the code again.
+    if (error instanceof ApiError && 'verification_token' in error.errors) {
+      verified.key = undefined;
+      verified.token = undefined;
+    }
+    throw error;
+  }
 }
 
 export async function verifyCode(challengeId: string, code: string): Promise<string> {

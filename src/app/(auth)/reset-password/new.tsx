@@ -1,10 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Button, Notice, ResendCodeButton, Screen, TextField } from '@/components/ui';
-import { requestPasswordResetCode, resetPassword } from '@/features/auth/api';
+import { requestPasswordResetCode, resetPassword, type VerifiedCode } from '@/features/auth/api';
 import { useRegistrationDraft } from '@/features/auth/RegistrationDraft';
 import { applyServerErrors } from '@/lib/forms';
 import { newPasswordSchema, type NewPasswordForm } from '@/lib/validation';
@@ -16,6 +16,8 @@ export default function ResetPasswordNew() {
   const { draft, update } = useRegistrationDraft();
   const [formError, setFormError] = useState<string | null>(null);
   const [resent, setResent] = useState(false);
+  // A checked code stays usable for retries on this screen (the server accepts each code once).
+  const verified = useRef<VerifiedCode>({});
   const { control, handleSubmit, setError, formState } = useForm<NewPasswordForm>({
     resolver: zodResolver(newPasswordSchema),
     defaultValues: { code: '', password: '', password_confirmation: '' },
@@ -23,7 +25,7 @@ export default function ResetPasswordNew() {
 
   const mutation = useMutation({
     mutationFn: (values: NewPasswordForm) =>
-      resetPassword({ contact: draft.resetContact ?? '', challengeId: draft.resetChallenge?.challenge_id ?? '', ...values }),
+      resetPassword({ contact: draft.resetContact ?? '', challengeId: draft.resetChallenge?.challenge_id ?? '', ...values }, verified.current),
     onSuccess: () => {
       update({ resetChallenge: undefined, signInNotice: 'Your password was changed. Sign in with your new password. Other devices were signed out.' });
       router.dismissTo('/sign-in');

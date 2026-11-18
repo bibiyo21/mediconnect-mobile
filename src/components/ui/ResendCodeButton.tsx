@@ -4,8 +4,10 @@ import { Button } from './Button';
 const COOLDOWN_SECONDS = 60;
 
 /**
- * "Send a new code" with the same one-minute wait the server enforces, so people
- * see when they can try again instead of hitting a rate-limit error.
+ * "Send a new code" with a one-minute wait between requests, so codes are not
+ * sent faster than people can receive them. The server's own limit is different:
+ * 5 codes per email or mobile number every 15 minutes; past that the request gets
+ * a 429 and the screen shows the rate-limit message.
  */
 export function ResendCodeButton({ onResend, loading }: { onResend: () => void; loading: boolean }) {
   const [remaining, setRemaining] = useState(COOLDOWN_SECONDS);

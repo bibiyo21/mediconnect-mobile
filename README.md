@@ -93,7 +93,7 @@ src/app/
   (app)/devices.tsx           signed-in devices (GET /auth/devices, DELETE /auth/devices/{id})
 ```
 
-Shared UI (`src/components/ui`) covers Screen, Button, LinkButton, TextField (with Show/Hide for passwords), Checkbox, Card, Notice, StateView (loading, empty, error), ResendCodeButton (60 s countdown, matching the server limit) and OfflineBanner. Tokens come from `@mediconnect/design-system` (`docs/design-system.md`), light and dark. Fields carry labels, errors are announced, and buttons expose disabled and busy states.
+Shared UI (`src/components/ui`) covers Screen, Button, LinkButton, TextField (with Show/Hide for passwords), Checkbox, Card, Notice, StateView (loading, empty, error), ResendCodeButton (60 s countdown between requests; the server allows 5 codes per address every 15 minutes) and OfflineBanner. Tokens come from `@mediconnect/design-system` (`docs/design-system.md`), light and dark. Fields carry labels, errors are announced, and buttons expose disabled and busy states.
 
 ## Backend dependencies and deferred items
 

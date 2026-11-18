@@ -77,6 +77,43 @@ describe('password reset', () => {
     expect(session.signIn).not.toHaveBeenCalled();
   });
 
+  it('reuses the checked code on a retry instead of sending the used code again', async () => {
+    const weak = { error: { success: false, message: 'Validation failed', code: 'VALIDATION_FAILED', errors: { password: ['The given password has appeared in a data leak.'] } }, response: new Response(null, { status: 422 }) };
+    jest
+      .mocked(api.POST)
+      .mockResolvedValueOnce(ok({ verification_token: 't'.repeat(64), expires_in_minutes: 10 }) as never)
+      .mockResolvedValueOnce(weak as never)
+      .mockResolvedValueOnce(ok({}) as never);
+    const verified = {};
+    const input = { contact: 'a@example.test', challengeId: 'c1', code: '123456', password: 'leakedpass1', password_confirmation: 'leakedpass1' };
+
+    await expect(resetPassword(input, verified)).rejects.toThrow('Validation failed');
+    await resetPassword({ ...input, password: 'freshpass42', password_confirmation: 'freshpass42' }, verified);
+
+    const calls = jest.mocked(api.POST).mock.calls as unknown as [string, { body: Record<string, unknown> }][];
+    expect(calls.map((c) => c[0])).toEqual(['/auth/otp/verify', '/auth/reset-password', '/auth/reset-password']);
+    expect(calls[2][1].body.verification_token).toBe('t'.repeat(64));
+  });
+
+  it('checks the code again when it changes or when the token was rejected', async () => {
+    const expired = { error: { success: false, message: 'This verification has expired.', code: 'VALIDATION_FAILED', errors: { verification_token: ['This verification has expired.'] } }, response: new Response(null, { status: 422 }) };
+    jest
+      .mocked(api.POST)
+      .mockResolvedValueOnce(ok({ verification_token: 'a'.repeat(64), expires_in_minutes: 10 }) as never)
+      .mockResolvedValueOnce(expired as never)
+      .mockResolvedValueOnce(ok({ verification_token: 'b'.repeat(64), expires_in_minutes: 10 }) as never)
+      .mockResolvedValueOnce(ok({}) as never);
+    const verified = {};
+    const input = { contact: 'a@example.test', challengeId: 'c1', code: '123456', password: 'abcdefgh12', password_confirmation: 'abcdefgh12' };
+
+    await expect(resetPassword(input, verified)).rejects.toThrow('This verification has expired.');
+    await resetPassword({ ...input, challengeId: 'c2', code: '654321' }, verified);
+
+    const calls = jest.mocked(api.POST).mock.calls as unknown as [string, { body: Record<string, unknown> }][];
+    expect(calls.map((c) => c[0])).toEqual(['/auth/otp/verify', '/auth/reset-password', '/auth/otp/verify', '/auth/reset-password']);
+    expect(calls[3][1].body.verification_token).toBe('b'.repeat(64));
+  });
+
   it('does not call reset when the code is wrong', async () => {
     jest.mocked(api.POST).mockResolvedValueOnce({ error: { success: false, message: 'The code is invalid.', code: 'VALIDATION_FAILED', errors: { code: ['The code is invalid.'] } }, response: new Response(null, { status: 422 }) } as never);
 
