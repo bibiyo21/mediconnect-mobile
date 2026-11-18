@@ -4,7 +4,8 @@
  */
 import { unwrap, type components } from '@mediconnect/api-client';
 import { api, prepareWrites } from '@/lib/api';
-import { normalizeMobile, type ProfileForm } from '@/lib/validation';
+import { GUARDIAN_ATTESTATION_VERSION } from '@/lib/config';
+import { normalizeMobile, type DependentForm, type ProfileForm } from '@/lib/validation';
 
 export type MyPatientProfile = components['schemas']['MyPatientProfileResource'];
 type ProfileUpdate = components['schemas']['UpdateMyPatientProfileRequest'];
@@ -59,5 +60,74 @@ export function toForm(profile: MyPatientProfile): ProfileForm {
     city: profile.address?.city ?? '',
     province: profile.address?.province ?? '',
     postal_code: profile.address?.postal_code ?? '',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Dependents: /patients/me/dependents (guardian's own, AUTHORIZED links only)
+// ---------------------------------------------------------------------------
+
+export type Dependent = components['schemas']['DependentResource'];
+type DependentCreate = components['schemas']['StoreDependentRequest'];
+
+export async function fetchDependents(): Promise<Dependent[]> {
+  return unwrap(await api.GET('/patients/me/dependents'));
+}
+
+export async function fetchDependent(id: string): Promise<Dependent> {
+  return unwrap(await api.GET('/patients/me/dependents/{dependentId}', { params: { path: { dependentId: id } } }));
+}
+
+/**
+ * Adds a dependent. `idempotencyKey` is created once per "add" action and
+ * reused on retries, so a lost response never creates the person twice.
+ */
+export async function addDependent(form: DependentForm, idempotencyKey: string): Promise<Dependent> {
+  if (!form.guardian_attestation) throw new Error('The guardian attestation must be accepted before adding a dependent.');
+  await prepareWrites();
+  const body: DependentCreate = {
+    ...dependentPerson(form),
+    relationship: form.relationship as DependentCreate['relationship'],
+    guardian_attestation: true, // checked above; the server checks again
+    guardian_attestation_version: GUARDIAN_ATTESTATION_VERSION as DependentCreate['guardian_attestation_version'],
+  };
+  return unwrap(await api.POST('/patients/me/dependents', { body, headers: { 'Idempotency-Key': idempotencyKey } }));
+}
+
+export async function updateDependent(id: string, form: DependentForm): Promise<Dependent> {
+  await prepareWrites();
+  return unwrap(
+    await api.PATCH('/patients/me/dependents/{dependentId}', {
+      params: { path: { dependentId: id } },
+      body: { ...dependentPerson(form), relationship: form.relationship as DependentCreate['relationship'] },
+    }),
+  );
+}
+
+/** Revokes the link; the person's records are kept. */
+export async function removeDependent(id: string): Promise<void> {
+  await prepareWrites();
+  unwrap(await api.DELETE('/patients/me/dependents/{dependentId}', { params: { path: { dependentId: id } } }));
+}
+
+export function dependentToForm(d: Dependent): DependentForm {
+  return {
+    first_name: d.first_name,
+    middle_name: d.middle_name ?? '',
+    last_name: d.last_name,
+    date_of_birth: d.date_of_birth ?? '',
+    sex: d.sex ?? '',
+    relationship: d.relationship,
+    guardian_attestation: true,
+  };
+}
+
+function dependentPerson(form: DependentForm) {
+  return {
+    first_name: form.first_name,
+    middle_name: form.middle_name || null,
+    last_name: form.last_name,
+    date_of_birth: form.date_of_birth,
+    sex: form.sex || null,
   };
 }

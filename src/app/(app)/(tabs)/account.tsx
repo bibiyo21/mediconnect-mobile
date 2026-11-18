@@ -18,7 +18,6 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 export default function Account() {
-  const styles = useThemedStyles(createStyles);
   const me = useQuery({ queryKey: ['me'], queryFn: fetchMe });
   const logout = useMutation({ mutationFn: signOut });
 
@@ -34,9 +33,11 @@ export default function Account() {
           <Row label="Mobile" value={me.data.mobile_masked ? `${me.data.mobile_masked}${me.data.mobile_verified ? ' (verified)' : ' (not verified)'}` : 'Not added'} />
           <LinkButton label={me.data.mobile_masked ? 'Change mobile number' : 'Add a mobile number'} onPress={() => router.push({ pathname: '/contact', params: { kind: 'mobile' } })} />
           <Button label="Edit profile" variant="secondary" onPress={() => router.push('/profile')} />
-          <Text style={styles.note}>Adding family members as dependents arrives in a later update.</Text>
         </Card>
       ) : null}
+      <Card title="Family">
+        <Button label="Family members" variant="secondary" onPress={() => router.push('/family')} />
+      </Card>
       <Card title="Security">
         <Button label="Signed-in devices" variant="secondary" onPress={() => router.push('/devices')} />
       </Card>
@@ -51,5 +52,4 @@ const createStyles = (c: ThemeColors) =>
     row: { gap: space[1], paddingVertical: space[1] },
     label: { ...typography.small, color: c.textMuted },
     value: { ...typography.body, color: c.textPrimary },
-    note: { ...typography.small, color: c.textMuted },
   });

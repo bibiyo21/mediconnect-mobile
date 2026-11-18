@@ -1,4 +1,4 @@
-import { codeSchema, contactSchema, detailsSchema, formatDateInput, latestAdultBirthDate, manilaToday, newPasswordSchema, normalizeMobile, profileSchema } from '../validation';
+import { codeSchema, dependentSchema, contactSchema, detailsSchema, formatDateInput, latestAdultBirthDate, manilaToday, newPasswordSchema, normalizeMobile, profileSchema } from '../validation';
 
 const validDetails = {
   first_name: 'Juan',
@@ -134,5 +134,19 @@ describe('profileSchema (PATCH /patients/me)', () => {
     expect(paths).toEqual(['line1', 'city']);
     expect(profileSchema.safeParse({ ...base, line1: '1 Rizal St', city: 'Makati', postal_code: '12' }).success).toBe(false);
     expect(profileSchema.safeParse({ ...base, line1: '1 Rizal St', city: 'Makati', postal_code: '1210' }).success).toBe(true);
+  });
+});
+
+describe('dependentSchema', () => {
+  const base = { first_name: 'Lia', middle_name: '', last_name: 'Reyes', date_of_birth: '2018-03-10', sex: '' as const, relationship: 'CHILD' as const, guardian_attestation: true };
+
+  it('accepts a child of any age, including a newborn today', () => {
+    expect(dependentSchema.safeParse(base).success).toBe(true);
+    expect(dependentSchema.safeParse({ ...base, date_of_birth: manilaToday() }).success).toBe(true);
+  });
+
+  it('refuses a future birth date and a missing relationship', () => {
+    expect(dependentSchema.safeParse({ ...base, date_of_birth: '2999-01-01' }).success).toBe(false);
+    expect(dependentSchema.safeParse({ ...base, relationship: undefined }).success).toBe(false);
   });
 });

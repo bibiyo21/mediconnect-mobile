@@ -11,16 +11,8 @@ import { isEmail, normalizeMobile } from '@/lib/validation';
 
 export type Account = components['schemas']['AccountResource'];
 
-/** Device row from GET /auth/devices (DeviceResource; the contract types it loosely). */
-export interface Device {
-  id: string;
-  platform: 'IOS' | 'ANDROID' | 'WEB';
-  device_name: string | null;
-  app_version: string | null;
-  last_seen_at: string | null;
-  created_at: string | null;
-  current: boolean;
-}
+/** Device row from GET /auth/devices. */
+export type Device = components['schemas']['DeviceResource'];
 
 interface SignedIn {
   user: Account;
@@ -200,7 +192,7 @@ export async function fetchMe(): Promise<Account> {
 }
 
 export async function fetchDevices(): Promise<Device[]> {
-  return unwrap(await api.GET('/auth/devices')) as Device[];
+  return unwrap(await api.GET('/auth/devices'));
 }
 
 export async function signOutDevice(deviceId: string): Promise<void> {

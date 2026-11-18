@@ -56,6 +56,20 @@ export async function mockApi(page: Page, { signedIn }: { signedIn: boolean }): 
     }
     return route.fulfill(ok(patientProfile));
   });
+  const dependents = [{ id: '01a1ec01-0000-7000-8000-0000000000d1', first_name: 'Lia', middle_name: null, last_name: 'Reyes', date_of_birth: '2018-03-10', sex: 'FEMALE', relationship: 'CHILD', authorized_at: '2026-11-18T00:00:00Z' }];
+  await page.route('**/api/v1/patients/me/dependents', (route) => {
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ success: true, data: { ...body, id: '01a1ec01-0000-7000-8000-0000000000d2', authorized_at: '2026-11-18T01:00:00Z' }, meta: {}, message: null }) });
+    }
+    return route.fulfill(ok(dependents));
+  });
+  await page.route('**/api/v1/patients/me/dependents/*', (route) => {
+    const method = route.request().method();
+    if (method === 'DELETE') return route.fulfill(ok({}));
+    if (method === 'PATCH') return route.fulfill(ok({ ...dependents[0], ...(route.request().postDataJSON() as object) }));
+    return route.fulfill(ok(dependents[0]));
+  });
   await page.route('**/api/v1/auth/contact/otp', (route) =>
     route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ success: true, data: { challenge_id: '01a1ec01-0000-7000-8000-0000000000c2', channel: 'SMS', destination_masked: '+63•••••••4567', expires_at: '2026-11-18T00:30:00Z' }, meta: {}, message: 'If the address can receive a code, one has been sent.' }) }),
   );

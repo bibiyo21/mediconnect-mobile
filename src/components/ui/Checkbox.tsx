@@ -19,6 +19,8 @@ export function Checkbox({ checked, onChange, label, accessibilityLabel, error }
         role="checkbox"
         accessibilityLabel={accessibilityLabel}
         accessibilityState={{ checked }}
+        // Explicit for the web build: an unchecked box must still expose aria-checked="false".
+        aria-checked={checked}
         onPress={() => onChange(!checked)}
         style={styles.row}
       >

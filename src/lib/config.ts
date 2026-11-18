@@ -12,3 +12,6 @@ export const LEGAL_VERSIONS = {
   privacyNotice: process.env.EXPO_PUBLIC_PRIVACY_NOTICE_VERSION ?? 'draft-2026-11',
   terms: process.env.EXPO_PUBLIC_TERMS_VERSION ?? 'draft-2026-11',
 } as const;
+
+/** Version of the guardian attestation shown when adding a dependent (the API refuses others). */
+export const GUARDIAN_ATTESTATION_VERSION = process.env.EXPO_PUBLIC_GUARDIAN_ATTESTATION_VERSION ?? 'draft-2026-11';

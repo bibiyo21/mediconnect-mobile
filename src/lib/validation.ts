@@ -139,6 +139,29 @@ export const profileSchema = z
   });
 
 export type ProfileForm = z.infer<typeof profileSchema>;
+
+/** A dependent's birth date: any age, real, not in the future (mirrors BirthDate::anyAge). */
+export const anyBirthDate = z
+  .string()
+  .trim()
+  .min(1, 'Enter the date of birth.')
+  .refine((v) => isRealDate(v) && v > '1900-01-01', 'Enter a real date, for example 2018-05-17.')
+  .refine((v) => !isRealDate(v) || v <= manilaToday(), 'The date of birth cannot be in the future.');
+
+export const RELATIONSHIPS = ['CHILD', 'PARENT', 'SPOUSE', 'SIBLING', 'GRANDPARENT', 'GRANDCHILD', 'LEGAL_WARD', 'OTHER'] as const;
+
+/** Add or edit a dependent (mirrors Store/UpdateDependentRequest). The attestation applies when adding. */
+export const dependentSchema = z.object({
+  first_name: z.string().trim().min(1, 'Enter their first name.').max(100),
+  middle_name: optionalText(100),
+  last_name: z.string().trim().min(1, 'Enter their last name.').max(100),
+  date_of_birth: anyBirthDate,
+  sex: z.enum(['', 'FEMALE', 'MALE', 'OTHER', 'UNKNOWN']),
+  relationship: z.enum(RELATIONSHIPS, { message: 'Choose how they are related to you.' }),
+  guardian_attestation: z.boolean(),
+});
+
+export type DependentForm = z.infer<typeof dependentSchema>;
 export type ContactForm = z.infer<typeof contactSchema>;
 export type SignInForm = z.infer<typeof signInSchema>;
 export type CodeForm = z.infer<typeof codeSchema>;
