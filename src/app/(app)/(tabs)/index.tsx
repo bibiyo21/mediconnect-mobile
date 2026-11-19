@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
-import { Card, Notice, Screen } from '@/components/ui';
+import { BrandIcon, Card, Notice, Screen, type BrandIconName } from '@/components/ui';
 import { fetchMe } from '@/features/auth/api';
 import { space, typography } from '@/theme/tokens';
 import { useThemedStyles, type ThemeColors } from '@/theme/useTheme';
@@ -9,12 +9,12 @@ import { useThemedStyles, type ThemeColors } from '@/theme/useTheme';
  * Home shell. Each card names a feature that arrives with a later phase; none
  * of them calls an endpoint that does not exist yet (development-roadmap.md).
  */
-const UPCOMING = [
-  { title: 'Find a doctor', body: 'Search by specialty, location, HMO and availability.', phase: 'Phase 3' },
-  { title: 'Appointments', body: 'Book clinic visits and online consultations.', phase: 'Phases 4–6' },
-  { title: 'Clinic walk-ins', body: 'Join a clinic queue and follow your place in line.', phase: 'Phase 5' },
-  { title: 'HMO memberships', body: 'Save your HMO card details for faster booking.', phase: 'Phase 7' },
-] as const;
+const UPCOMING: readonly { icon: BrandIconName; title: string; body: string; phase: string }[] = [
+  { icon: 'find-a-doctor', title: 'Find a doctor', body: 'Search by specialty, location, HMO and availability.', phase: 'Phase 3' },
+  { icon: 'book-appointment', title: 'Appointments', body: 'Book clinic visits and online consultations.', phase: 'Phases 4–6' },
+  { icon: 'hospitals-clinics', title: 'Clinic walk-ins', body: 'Join a clinic queue and follow your place in line.', phase: 'Phase 5' },
+  { icon: 'hmo-coverage', title: 'HMO memberships', body: 'Save your HMO card details for faster booking.', phase: 'Phase 7' },
+];
 
 export default function Home() {
   const styles = useThemedStyles(createStyles);
@@ -28,8 +28,11 @@ export default function Home() {
         <Text style={styles.soon}>Your account is ready. These features are on the way:</Text>
         {UPCOMING.map((item) => (
           <View key={item.title} style={styles.item} accessible accessibilityLabel={`${item.title}. ${item.body}`}>
-            <Text style={styles.itemTitle}>{item.title}</Text>
-            <Text style={styles.body}>{item.body}</Text>
+            <BrandIcon name={item.icon} size={40} />
+            <View style={styles.itemText}>
+              <Text style={styles.itemTitle}>{item.title}</Text>
+              <Text style={styles.body}>{item.body}</Text>
+            </View>
           </View>
         ))}
       </Card>
@@ -41,6 +44,7 @@ const createStyles = (c: ThemeColors) =>
   StyleSheet.create({
     body: { ...typography.body, color: c.textPrimary },
     soon: { ...typography.body, color: c.textSecondary },
-    item: { gap: space[1], paddingTop: space[2] },
+    item: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3], paddingTop: space[3] },
+    itemText: { flex: 1, gap: space[1] },
     itemTitle: { ...typography.label, color: c.textPrimary },
   });

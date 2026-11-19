@@ -26,7 +26,7 @@ const config: ExpoConfig = {
   ios: {
     bundleIdentifier: `${BUNDLE_ID}${suffix}`,
     supportsTablet: false,
-    icon: './assets/expo.icon',
+    icon: './assets/images/icon.png',
     infoPlist: {
       // Standard HTTPS only (export compliance); confirm with counsel before release.
       ITSAppUsesNonExemptEncryption: false,
@@ -42,7 +42,7 @@ const config: ExpoConfig = {
       'android.permission.WRITE_EXTERNAL_STORAGE',
     ],
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
+      backgroundColor: '#1E6FD9',
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -56,7 +56,7 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
-    ['expo-splash-screen', { backgroundColor: '#0B6E6E', image: './assets/images/splash-icon.png', imageWidth: 76 }],
+    ['expo-splash-screen', { backgroundColor: '#1E6FD9', image: './assets/images/splash-icon.png', imageWidth: 96 }],
     'expo-secure-store',
   ],
   experiments: { typedRoutes: true, reactCompiler: true },

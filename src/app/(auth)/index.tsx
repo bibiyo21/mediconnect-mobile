@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
-import { Button, Notice, Screen } from '@/components/ui';
+import { BrandMark, Button, Notice, Screen } from '@/components/ui';
 import { formatManilaDate } from '@/lib/dates';
 import { useSession } from '@/features/session/SessionProvider';
 import { space, typography } from '@/theme/tokens';
@@ -12,6 +12,7 @@ export default function Welcome() {
   return (
     <Screen topInset>
       <View style={styles.hero}>
+        <BrandMark size={72} />
         <Text accessibilityRole="header" style={styles.brand}>
           MediConnect
         </Text>
@@ -32,7 +33,7 @@ export default function Welcome() {
 
 const createStyles = (c: ThemeColors) =>
   StyleSheet.create({
-    hero: { flex: 1, justifyContent: 'center', gap: space[2], paddingVertical: space[8] },
+    hero: { flex: 1, justifyContent: 'center', gap: space[3], paddingVertical: space[8] },
     brand: { ...typography.display, color: c.primary },
     tagline: { ...typography.body, color: c.textMuted },
     actions: { gap: space[2] },
