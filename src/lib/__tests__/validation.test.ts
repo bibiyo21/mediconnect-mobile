@@ -1,4 +1,4 @@
-import { codeSchema, dependentSchema, contactSchema, detailsSchema, formatDateInput, latestAdultBirthDate, manilaToday, newPasswordSchema, normalizeMobile, profileSchema } from '../validation';
+import { codeSchema, dependentSchema, doctorProfileSchema, doctorStartSchema, contactSchema, detailsSchema, formatDateInput, latestAdultBirthDate, manilaToday, newPasswordSchema, normalizeMobile, profileSchema } from '../validation';
 
 const validDetails = {
   first_name: 'Juan',
@@ -148,5 +148,20 @@ describe('dependentSchema', () => {
   it('refuses a future birth date and a missing relationship', () => {
     expect(dependentSchema.safeParse({ ...base, date_of_birth: '2999-01-01' }).success).toBe(false);
     expect(dependentSchema.safeParse({ ...base, relationship: undefined }).success).toBe(false);
+  });
+});
+
+describe('doctor schemas', () => {
+  it('requires the licensed-physician confirmation to start', () => {
+    expect(doctorStartSchema.safeParse({ display_name: 'Dr. Ana', professional_title: '', confirm_licensed: false }).success).toBe(false);
+    expect(doctorStartSchema.safeParse({ display_name: 'Dr. Ana', professional_title: '', confirm_licensed: true }).success).toBe(true);
+  });
+
+  it('checks licence digits, years and a main specialty', () => {
+    const base = { display_name: 'Dr. Ana', professional_title: '', biography: '', prc_license_number: '', medical_school: '', years_experience: '', gender: '' as const, languages: [], primary_specialty_id: 'card' };
+    expect(doctorProfileSchema.safeParse(base).success).toBe(true);
+    expect(doctorProfileSchema.safeParse({ ...base, prc_license_number: 'PRC-12' }).success).toBe(false);
+    expect(doctorProfileSchema.safeParse({ ...base, years_experience: '71' }).success).toBe(false);
+    expect(doctorProfileSchema.safeParse({ ...base, primary_specialty_id: '' }).success).toBe(false);
   });
 });

@@ -167,3 +167,25 @@ export type SignInForm = z.infer<typeof signInSchema>;
 export type CodeForm = z.infer<typeof codeSchema>;
 export type DetailsForm = z.infer<typeof detailsSchema>;
 export type NewPasswordForm = z.infer<typeof newPasswordSchema>;
+
+/** POST /doctors (start onboarding). */
+export const doctorStartSchema = z.object({
+  display_name: z.string().trim().min(2, 'Enter the name patients will see, for example Dr. Ana Santos.').max(160),
+  professional_title: optionalText(60),
+  confirm_licensed: z.boolean().refine((v) => v, 'Confirm that you are a physician licensed by the PRC.'),
+});
+export type DoctorStartForm = z.infer<typeof doctorStartSchema>;
+
+/** PATCH /doctors/me form (mirrors UpdateMyDoctorProfileRequest for the fields the app edits). */
+export const doctorProfileSchema = z.object({
+  display_name: z.string().trim().min(2, 'Enter your display name.').max(160),
+  professional_title: optionalText(60),
+  biography: optionalText(3000),
+  prc_license_number: z.string().trim().refine((v) => v === '' || /^\d{5,10}$/.test(v), 'Enter the PRC licence number using digits only.'),
+  medical_school: optionalText(200),
+  years_experience: z.string().trim().refine((v) => v === '' || (/^\d{1,2}$/.test(v) && Number(v) <= 70), 'Enter a number of years from 0 to 70.'),
+  gender: z.enum(['', 'FEMALE', 'MALE', 'OTHER']),
+  languages: z.array(z.string()),
+  primary_specialty_id: z.string().min(1, 'Choose your main specialty.'),
+});
+export type DoctorProfileForm = z.infer<typeof doctorProfileSchema>;

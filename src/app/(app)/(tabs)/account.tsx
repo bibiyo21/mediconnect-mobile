@@ -35,6 +35,15 @@ export default function Account() {
           <Button label="Edit profile" variant="secondary" onPress={() => router.push('/profile')} />
         </Card>
       ) : null}
+      {me.data ? (
+        <Card title="For doctors">
+          {me.data.roles.includes('DOCTOR') ? (
+            <Button label="Doctor profile" variant="secondary" onPress={() => router.push('/doctor')} />
+          ) : (
+            <Button label="Register as a doctor" variant="secondary" onPress={() => router.push('/doctor/start')} />
+          )}
+        </Card>
+      ) : null}
       <Card title="Family">
         <Button label="Family members" variant="secondary" onPress={() => router.push('/family')} />
       </Card>

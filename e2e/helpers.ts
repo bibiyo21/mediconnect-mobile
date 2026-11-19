@@ -42,10 +42,11 @@ const ok = (data: unknown) => ({ status: 200, contentType: 'application/json', b
  * The web build uses cookie sessions: the app asks GET /auth/me at start-up.
  * These mocks stand in for the backend so the suite runs without it.
  */
-export async function mockApi(page: Page, { signedIn }: { signedIn: boolean }): Promise<void> {
+export async function mockApi(page: Page, { signedIn, doctor = null }: { signedIn: boolean; doctor?: 'REGISTERED' | 'REJECTED' | null }): Promise<void> {
+  const me = doctor ? { ...account, roles: ['PATIENT', 'DOCTOR'] } : account;
   await page.route('**/sanctum/csrf-cookie', (route) => route.fulfill({ status: 204 }));
   await page.route('**/api/v1/auth/me', (route) =>
-    signedIn ? route.fulfill(ok(account)) : route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Unauthenticated.', errors: {}, code: 'UNAUTHENTICATED' }) }),
+    signedIn ? route.fulfill(ok(me)) : route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Unauthenticated.', errors: {}, code: 'UNAUTHENTICATED' }) }),
   );
   await page.route('**/api/v1/auth/devices', (route) =>
     route.fulfill(ok([{ id: 'd1', platform: 'WEB', device_name: null, app_version: null, last_seen_at: '2026-11-18T00:15:00Z', created_at: '2026-11-18T00:14:00Z', current: true }])),
@@ -77,6 +78,35 @@ export async function mockApi(page: Page, { signedIn }: { signedIn: boolean }): 
     route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ success: true, data: { challenge_id: '01a1ec01-0000-7000-8000-0000000000c2', channel: 'SMS', destination_masked: '+63•••••••4567', expires_at: '2026-11-18T00:30:00Z' }, meta: {}, message: 'If the address can receive a code, one has been sent.' }) }),
   );
   await page.route('**/api/v1/auth/contact', (route) => route.fulfill(ok({ ...account, mobile_masked: '+63•••••••4567', mobile_verified: true })));
+  const specialties = [
+    { id: 'sp-card', name: 'Cardiology', slug: 'cardiology', synonyms: ['cardiologist'], subspecialties: [] },
+    { id: 'sp-im', name: 'Internal Medicine', slug: 'internal-medicine', synonyms: ['internist'], subspecialties: [] },
+    { id: 'sp-ped', name: 'Pediatrics', slug: 'pediatrics', synonyms: ['pedia'], subspecialties: [] },
+  ];
+  await page.route('**/api/v1/specialties', (route) => route.fulfill(ok(specialties)));
+  let doctorProfile = {
+    id: 'doc1', display_name: 'Dr. Ana Reyes', professional_title: 'MD' as string | null, biography: null, prc_license_number_masked: null,
+    license_verification_status: doctor === 'REJECTED' ? 'REJECTED' : 'NOT_VERIFIED', onboarding_status: doctor ?? 'REGISTERED', licence_locked: false,
+    medical_school: null, years_experience: null, gender: null, languages: ['en'],
+    specialties: [{ specialty_id: 'sp-im', specialty_name: 'Internal Medicine', subspecialty_id: null, subspecialty_name: null, is_primary: true, board_certified: false }],
+    education: [], experience: [], profile_completeness: 35,
+    verification_history: doctor === 'REJECTED'
+      ? [{ from_status: null, to_status: 'REGISTERED', reason: null, occurred_at: '2026-11-18T01:00:00Z' }, { from_status: 'UNDER_REVIEW', to_status: 'REJECTED', reason: 'The PRC ID photo is unreadable.', occurred_at: '2026-11-19T01:00:00Z' }]
+      : [{ from_status: null, to_status: 'REGISTERED', reason: null, occurred_at: '2026-11-18T01:00:00Z' }],
+  };
+  await page.route('**/api/v1/doctors', (route) => {
+    const body = route.request().postDataJSON() as { display_name: string; professional_title: string | null };
+    doctorProfile = { ...doctorProfile, display_name: body.display_name, professional_title: body.professional_title };
+    return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ success: true, data: doctorProfile, meta: {}, message: null }) });
+  });
+  await page.route('**/api/v1/doctors/me', (route) => {
+    if (route.request().method() === 'PATCH') {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      doctorProfile = { ...doctorProfile, ...(body as object), prc_license_number_masked: body.prc_license_number ? `•••${String(body.prc_license_number).slice(-3)}` : doctorProfile.prc_license_number_masked } as typeof doctorProfile;
+      return route.fulfill(ok(doctorProfile));
+    }
+    return doctor ? route.fulfill(ok(doctorProfile)) : route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not found.', errors: {}, code: 'NOT_FOUND' }) });
+  });
   await page.route('**/api/v1/auth/otp/verify', (route) => route.fulfill(ok({ verification_token: 'v'.repeat(64), expires_in_minutes: 10 })));
   await page.route('**/api/v1/auth/reset-password', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: {}, meta: {}, message: 'Your password was changed.' }) }),

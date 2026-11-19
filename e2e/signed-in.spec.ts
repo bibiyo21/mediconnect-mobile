@@ -148,3 +148,58 @@ test('deleting the account needs confirmation and the password, then shows the d
   await expect(page.getByText(/scheduled for deletion on 18 December 2026/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
 });
+
+test.describe('doctor screens (mocked API)', () => {
+  for (const s of [
+    { path: '/doctor/start', heading: 'Register as a doctor', doctor: null },
+    { path: '/doctor', heading: 'Dr. Ana Reyes', doctor: 'REGISTERED' as const },
+    { path: '/doctor/edit', heading: 'Edit doctor profile', doctor: 'REGISTERED' as const },
+  ]) {
+    test(`${s.path}: renders, no horizontal scroll, no axe violations`, async ({ page }) => {
+      await mockApi(page, { signedIn: true, doctor: s.doctor });
+      await page.goto(s.path);
+      await expect(page.getByRole('heading', { name: s.heading, exact: true })).toBeVisible({ timeout: 45_000 });
+      await expectNoHorizontalScroll(page);
+      expect(await axeViolations(page)).toEqual([]);
+    });
+  }
+});
+
+test('a patient registers as a doctor from the account screen', async ({ page }) => {
+  await mockApi(page, { signedIn: true });
+  await page.goto('/account');
+  await page.getByRole('button', { name: 'Register as a doctor' }).click({ timeout: 45_000 });
+  await page.getByLabel('Name patients will see').fill('Dr. Ana Reyes');
+  await page.getByRole('button', { name: 'Start registration' }).click();
+  await expect(page.getByText('Confirm that you are a physician licensed by the PRC.')).toBeVisible();
+
+  await page.getByRole('checkbox').click();
+  const request = page.waitForRequest((r) => r.url().endsWith('/api/v1/doctors') && r.method() === 'POST');
+  await page.getByRole('button', { name: 'Start registration' }).click();
+  expect((await request).postDataJSON()).toEqual({ display_name: 'Dr. Ana Reyes', professional_title: null, confirm_licensed: true });
+  await expect(page.getByText(/Complete your profile and add your PRC licence number/)).toBeVisible();
+});
+
+test('a rejected doctor sees the reason and the next step', async ({ page }) => {
+  await mockApi(page, { signedIn: true, doctor: 'REJECTED' });
+  await page.goto('/doctor');
+  await expect(page.getByText('Changes needed: The PRC ID photo is unreadable.')).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByText(/update your documents and submit again/)).toBeVisible();
+});
+
+test('editing the doctor profile sends the licence only when typed and keeps the specialty list complete', async ({ page }) => {
+  await mockApi(page, { signedIn: true, doctor: 'REGISTERED' });
+  await page.goto('/doctor/edit');
+  await expect(page.getByLabel('PRC licence number')).toHaveValue('', { timeout: 45_000 });
+  await page.getByRole('radio', { name: 'Cardiology' }).click();
+  await page.getByRole('checkbox', { name: 'Filipino' }).click();
+  await page.getByLabel('PRC licence number').fill('0123456');
+  const request = page.waitForRequest((r) => r.url().endsWith('/api/v1/doctors/me') && r.method() === 'PATCH');
+  await page.getByRole('button', { name: 'Save doctor profile' }).click();
+  const body = (await request).postDataJSON();
+  expect(body).toMatchObject({ prc_license_number: '0123456', languages: ['en', 'fil'] });
+  expect(body.specialties).toEqual([
+    { specialty_id: 'sp-card', subspecialty_id: null, is_primary: true, board_certified: false },
+    { specialty_id: 'sp-im', subspecialty_id: null, is_primary: false, board_certified: false },
+  ]);
+});
