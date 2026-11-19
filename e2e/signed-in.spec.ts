@@ -180,6 +180,12 @@ test('a patient registers as a doctor from the account screen', async ({ page })
   await expect(page.getByText(/Complete your profile and add your PRC licence number/)).toBeVisible();
 });
 
+test('doctor specialties are labelled self-reported until review (D-40)', async ({ page }) => {
+  await mockApi(page, { signedIn: true, doctor: 'REGISTERED' });
+  await page.goto('/doctor');
+  await expect(page.getByText('Internal Medicine · self-reported, confirmed at review')).toBeVisible({ timeout: 45_000 });
+});
+
 test('a rejected doctor sees the reason and the next step', async ({ page }) => {
   await mockApi(page, { signedIn: true, doctor: 'REJECTED' });
   await page.goto('/doctor');

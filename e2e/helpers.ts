@@ -88,7 +88,8 @@ export async function mockApi(page: Page, { signedIn, doctor = null }: { signedI
     id: 'doc1', display_name: 'Dr. Ana Reyes', professional_title: 'MD' as string | null, biography: null, prc_license_number_masked: null,
     license_verification_status: doctor === 'REJECTED' ? 'REJECTED' : 'NOT_VERIFIED', onboarding_status: doctor ?? 'REGISTERED', licence_locked: false,
     medical_school: null, years_experience: null, gender: null, languages: ['en'],
-    specialties: [{ specialty_id: 'sp-im', specialty_name: 'Internal Medicine', subspecialty_id: null, subspecialty_name: null, is_primary: true, board_certified: false }],
+    specialties: [{ specialty_id: 'sp-im', specialty_name: 'Internal Medicine', subspecialty_id: null, subspecialty_name: null, is_primary: true, board_certified: false, verification_status: 'SELF_REPORTED' }],
+    specialty_review_pending: false,
     education: [], experience: [], profile_completeness: 35,
     verification_history: doctor === 'REJECTED'
       ? [{ from_status: null, to_status: 'REGISTERED', reason: null, occurred_at: '2026-11-18T01:00:00Z' }, { from_status: 'UNDER_REVIEW', to_status: 'REJECTED', reason: 'The PRC ID photo is unreadable.', occurred_at: '2026-11-19T01:00:00Z' }]

@@ -6,10 +6,10 @@ const profile: MyDoctorProfile = {
   license_verification_status: 'NOT_VERIFIED', onboarding_status: 'REGISTERED', licence_locked: false, medical_school: null, years_experience: 12, gender: null,
   languages: ['en'],
   specialties: [
-    { specialty_id: 'card', specialty_name: 'Cardiology', subspecialty_id: 'interv', subspecialty_name: 'Interventional Cardiology', is_primary: true, board_certified: true },
-    { specialty_id: 'im', specialty_name: 'Internal Medicine', subspecialty_id: null, subspecialty_name: null, is_primary: false, board_certified: false },
+    { specialty_id: 'card', specialty_name: 'Cardiology', subspecialty_id: 'interv', subspecialty_name: 'Interventional Cardiology', is_primary: true, board_certified: true, verification_status: 'CONFIRMED' },
+    { specialty_id: 'im', specialty_name: 'Internal Medicine', subspecialty_id: null, subspecialty_name: null, is_primary: false, board_certified: false, verification_status: 'SELF_REPORTED' },
   ],
-  education: [], experience: [], profile_completeness: 40, verification_history: [],
+  education: [], experience: [], profile_completeness: 40, verification_history: [], specialty_review_pending: false,
 };
 
 describe('doctor profile mapping', () => {

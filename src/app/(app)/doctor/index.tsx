@@ -47,6 +47,12 @@ export default function DoctorHome() {
         </View>
         <Text style={styles.meta}>PRC licence: {p.prc_license_number_masked ?? 'not added yet'}</Text>
         <Text style={styles.meta}>Languages: {p.languages.length ? p.languages.join(', ') : 'not added yet'}</Text>
+        {p.specialties.map((s) => (
+          <Text key={`${s.specialty_id}-${s.subspecialty_id ?? ''}`} style={styles.meta}>
+            {s.specialty_name}{s.subspecialty_name ? ` (${s.subspecialty_name})` : ''}{s.board_certified ? ', board certified' : ''} · {s.verification_status === 'CONFIRMED' ? 'confirmed by MediConnect' : 'self-reported, confirmed at review'}
+          </Text>
+        ))}
+        {p.specialty_review_pending ? <Notice tone="info" message="Your specialty changes will be checked by a medical administrator. Until then, patients see only your confirmed specialties." /> : null}
         <Button label="Edit doctor profile" variant="secondary" onPress={() => router.push('/doctor/edit')} />
       </Card>
 

@@ -91,6 +91,7 @@ export default function EditDoctorProfile() {
       </Card>
 
       <Card title="Main specialty">
+        <Notice message="Specialties and board certification are checked at review. Until then they are self-reported and patients do not see them." />
         <Controller control={control} name="primary_specialty_id" render={({ field }) => (
           <ChoiceGroup label="Choose one" options={specialties.data.map((s) => ({ value: s.id, label: s.name }))} value={field.value ?? ''} onChange={field.onChange} error={errors.primary_specialty_id?.message} />
         )} />
