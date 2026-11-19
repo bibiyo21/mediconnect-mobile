@@ -95,7 +95,28 @@ export async function mockApi(page: Page, { signedIn, doctor = null }: { signedI
       ? [{ from_status: null, to_status: 'REGISTERED', reason: null, occurred_at: '2026-11-18T01:00:00Z' }, { from_status: 'UNDER_REVIEW', to_status: 'REJECTED', reason: 'The PRC ID photo is unreadable.', occurred_at: '2026-11-19T01:00:00Z' }]
       : [{ from_status: null, to_status: 'REGISTERED', reason: null, occurred_at: '2026-11-18T01:00:00Z' }],
   };
+  // Public directory (2.11); test fixtures only.
+  const publicDoctor = {
+    id: '01a1ed01-0000-7000-8000-00000000d001', display_name: 'Dr. Ana Reyes', professional_title: 'MD', licence_verified: true, primary_specialty: 'Pediatrics',
+    specialties: [{ specialty_id: 'sp-ped', name: 'Pediatrics', subspecialty: null, board_certified: true }], languages: ['en', 'fil'], years_experience: 8,
+    practice_locations: [{ clinic_id: '01a1ec01-0000-7000-8000-00000000c001', clinic_name: 'Santos Family Clinic', clinic_location_id: 'loc1', location_name: 'Makati branch', city: 'Makati' }],
+    biography: 'Pediatrician caring for children in Makati.', medical_school: null, gender: null, education: [],
+  };
+  const publicClinic = {
+    id: '01a1ec01-0000-7000-8000-00000000c001', name: 'Santos Family Clinic', slug: 'santos-family-clinic', description: 'Family care in Makati.', organization_name: 'Santos Medical Group',
+    locations: [{ id: 'loc1', name: 'Makati branch', address_line1: 'Mabini St', address_line2: null, barangay: 'Poblacion', city: 'Makati', province: null, postal_code: null, latitude: null, longitude: null, timezone: 'Asia/Manila', phone: null, hospital_name: null,
+      operating_hours: [{ day_of_week: 1, opens_at: '08:00', closes_at: '12:00' }], services: [] }],
+    upcoming_closures: [],
+  };
+  await page.route(/\/api\/v1\/doctors\?.*$/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: [publicDoctor], meta: { page: 1, per_page: 20, total: 1, last_page: 1 }, message: null }) }));
+  await page.route(/\/api\/v1\/doctors\/01a1ed01-0000-7000-8000-00000000d001$/, (route) => route.fulfill(ok(publicDoctor)));
+  await page.route(/\/api\/v1\/doctors\/01a1ed01-0000-7000-8000-00000000d001\/services$/, (route) => route.fulfill(ok([
+    { id: 'ps1', name: 'Consultation', consultation_type: 'IN_PERSON', clinic_location_id: 'loc1', location_name: 'Makati branch', clinic_service_id: null, is_follow_up: false, duration_minutes: 20, buffer_minutes: 5, fee: { amount: 65000, currency: 'PHP', formatted: '₱650.00' }, is_hmo_eligible: false, status: 'ACTIVE', effective_from: '2026-11-19T02:00:00Z', effective_until: null },
+  ])));
+  await page.route(/\/api\/v1\/clinics\/01a1ec01-0000-7000-8000-00000000c001$/, (route) => route.fulfill(ok(publicClinic)));
+  await page.route(/\/api\/v1\/clinics\/01a1ec01-0000-7000-8000-00000000c001\/doctors$/, (route) => route.fulfill(ok([{ id: publicDoctor.id, display_name: 'Dr. Ana Reyes', professional_title: 'MD', primary_specialty: 'Pediatrics', location_ids: ['loc1'] }])));
   await page.route('**/api/v1/doctors', (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: [publicDoctor], meta: { page: 1, per_page: 20, total: 1, last_page: 1 }, message: null }) });
     const body = route.request().postDataJSON() as { display_name: string; professional_title: string | null };
     doctorProfile = { ...doctorProfile, display_name: body.display_name, professional_title: body.professional_title };
     return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ success: true, data: doctorProfile, meta: {}, message: null }) });

@@ -235,3 +235,30 @@ test('a doctor adds a service with a fee in pesos, sent as centavos', async ({ p
   expect((await request).postDataJSON()).toMatchObject({ consultation_type: 'IN_PERSON', clinic_location_id: 'loc1', name: 'Follow-up visit', fee_amount: 45050 });
   await expect(page.getByText('Added Follow-up visit', { exact: false })).toBeVisible();
 });
+
+test.describe('public directory (mocked API)', () => {
+  for (const s of [
+    { path: '/directory', heading: 'Doctors' },
+    { path: '/directory/doctor/01a1ed01-0000-7000-8000-00000000d001', heading: 'Dr. Ana Reyes' },
+    { path: '/directory/clinic/01a1ec01-0000-7000-8000-00000000c001', heading: 'Santos Family Clinic' },
+  ]) {
+    test(`${s.path}: renders, no horizontal scroll, no axe violations`, async ({ page }) => {
+      await mockApi(page, { signedIn: true });
+      await page.goto(s.path);
+      await expect(page.getByRole('heading', { name: s.heading, exact: true })).toBeVisible({ timeout: 45_000 });
+      await expectNoHorizontalScroll(page);
+      expect(await axeViolations(page)).toEqual([]);
+    });
+  }
+});
+
+test('a patient browses from home to a doctor, their fee and their clinic', async ({ page }) => {
+  await mockApi(page, { signedIn: true });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Browse doctors' }).click({ timeout: 45_000 });
+  await page.getByRole('link', { name: /Dr\. Ana Reyes/ }).click();
+  await expect(page.getByText('₱650.00')).toBeVisible();
+  await expect(page.getByText('Booking through MediConnect is not available yet', { exact: false }).last()).toBeVisible();
+  await page.getByRole('link', { name: 'About Santos Family Clinic' }).click();
+  await expect(page.getByRole('heading', { name: 'Santos Family Clinic', exact: true })).toBeVisible();
+});
