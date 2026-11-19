@@ -42,7 +42,7 @@ const ok = (data: unknown) => ({ status: 200, contentType: 'application/json', b
  * The web build uses cookie sessions: the app asks GET /auth/me at start-up.
  * These mocks stand in for the backend so the suite runs without it.
  */
-export async function mockApi(page: Page, { signedIn, doctor = null }: { signedIn: boolean; doctor?: 'REGISTERED' | 'REJECTED' | null }): Promise<void> {
+export async function mockApi(page: Page, { signedIn, doctor = null }: { signedIn: boolean; doctor?: 'REGISTERED' | 'REJECTED' | 'VERIFIED' | null }): Promise<void> {
   const me = doctor ? { ...account, roles: ['PATIENT', 'DOCTOR'] } : account;
   await page.route('**/sanctum/csrf-cookie', (route) => route.fulfill({ status: 204 }));
   await page.route('**/api/v1/auth/me', (route) =>
@@ -86,7 +86,7 @@ export async function mockApi(page: Page, { signedIn, doctor = null }: { signedI
   await page.route('**/api/v1/specialties', (route) => route.fulfill(ok(specialties)));
   let doctorProfile = {
     id: 'doc1', display_name: 'Dr. Ana Reyes', professional_title: 'MD' as string | null, biography: null, prc_license_number_masked: null,
-    license_verification_status: doctor === 'REJECTED' ? 'REJECTED' : 'NOT_VERIFIED', onboarding_status: doctor ?? 'REGISTERED', licence_locked: false,
+    license_verification_status: doctor === 'REJECTED' ? 'REJECTED' : doctor === 'VERIFIED' ? 'VERIFIED' : 'NOT_VERIFIED', onboarding_status: doctor ?? 'REGISTERED', licence_locked: false,
     medical_school: null, years_experience: null, gender: null, languages: ['en'],
     specialties: [{ specialty_id: 'sp-im', specialty_name: 'Internal Medicine', subspecialty_id: null, subspecialty_name: null, is_primary: true, board_certified: false, verification_status: 'SELF_REPORTED' }],
     specialty_review_pending: false,
@@ -107,6 +107,38 @@ export async function mockApi(page: Page, { signedIn, doctor = null }: { signedI
       return route.fulfill(ok(doctorProfile));
     }
     return doctor ? route.fulfill(ok(doctorProfile)) : route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Not found.', errors: {}, code: 'NOT_FOUND' }) });
+  });
+  // Clinic assignments and services (2.10); test fixtures only.
+  const location = { clinic_id: 'c1', clinic_name: 'Santos Family Clinic', clinic_location_id: 'loc1', location_name: 'Makati branch', location_city: 'Makati' };
+  let assignments = [
+    { id: 'as1', status: 'ACTIVE', doctor_profile_id: 'doc1', doctor_display_name: 'Dr. Ana Reyes', ...location, effective_from: '2026-11-19T02:00:00Z' as string | null, effective_until: null, end_reason: null, requested_at: '2026-11-18T02:00:00Z' },
+    { id: 'as2', status: 'PENDING', doctor_profile_id: 'doc1', doctor_display_name: 'Dr. Ana Reyes', clinic_id: 'c2', clinic_name: 'Reyes Medical Center', clinic_location_id: 'loc2', location_name: 'Quezon City', location_city: 'Quezon City', effective_from: null as string | null, effective_until: null, end_reason: null, requested_at: '2026-11-20T02:00:00Z' },
+  ];
+  const peso = (amount: number) => ({ amount, currency: 'PHP', formatted: `₱${(amount / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 })}` });
+  let services = [
+    { id: 'sv1', name: 'Consultation', consultation_type: 'IN_PERSON', clinic_location_id: 'loc1' as string | null, location_name: 'Makati branch' as string | null, clinic_service_id: null, is_follow_up: false, duration_minutes: 20, buffer_minutes: 5, fee: peso(65000), is_hmo_eligible: false, status: 'ACTIVE', effective_from: '2026-11-19T02:00:00Z', effective_until: null },
+  ];
+  await page.route('**/api/v1/doctors/me/assignments', (route) => route.fulfill(ok(assignments)));
+  await page.route(/\/api\/v1\/doctors\/me\/assignments\/[^/]+\/accept$/, (route) => {
+    const id = route.request().url().split('/').at(-2);
+    assignments = assignments.map((a) => (a.id === id ? { ...a, status: 'ACTIVE', effective_from: '2026-11-20T03:00:00Z' } : a));
+    return route.fulfill(ok(assignments.find((a) => a.id === id)));
+  });
+  await page.route('**/api/v1/doctors/me/services', (route) => {
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON() as { name: string; consultation_type: string; clinic_location_id: string | null; duration_minutes: number; fee_amount: number };
+      const created = { ...services[0], id: `sv${services.length + 1}`, name: body.name, consultation_type: body.consultation_type, clinic_location_id: body.clinic_location_id, location_name: null, duration_minutes: body.duration_minutes, fee: peso(body.fee_amount) };
+      services = [...services, created];
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ success: true, data: created, meta: {}, message: null }) });
+    }
+    return route.fulfill(ok(services));
+  });
+  await page.route(/\/api\/v1\/doctors\/me\/services\/[^/]+$/, (route) => {
+    const id = route.request().url().split('/').pop();
+    const body = route.request().postDataJSON() as { fee_amount: number };
+    const next = { ...services.find((x) => x.id === id)!, id: `${id}-v2`, fee: peso(body.fee_amount) };
+    services = services.map((x) => (x.id === id ? next : x));
+    return route.fulfill(ok(next));
   });
   await page.route('**/api/v1/auth/otp/verify', (route) => route.fulfill(ok({ verification_token: 'v'.repeat(64), expires_in_minutes: 10 })));
   await page.route('**/api/v1/auth/reset-password', (route) =>

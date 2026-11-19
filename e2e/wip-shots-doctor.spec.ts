@@ -10,6 +10,8 @@ const shots = [
   { name: 'doctor-status', path: '/doctor', heading: 'Dr. Ana Reyes', doctor: 'REGISTERED' as const },
   { name: 'doctor-rejected', path: '/doctor', heading: 'Dr. Ana Reyes', doctor: 'REJECTED' as const },
   { name: 'doctor-edit', path: '/doctor/edit', heading: 'Edit doctor profile', doctor: 'REGISTERED' as const },
+  { name: 'doctor-clinics', path: '/doctor/clinics', heading: 'Your clinics', doctor: 'VERIFIED' as const },
+  { name: 'doctor-services', path: '/doctor/services', heading: 'Services and fees', doctor: 'VERIFIED' as const },
 ];
 
 for (const s of shots) {

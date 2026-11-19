@@ -154,6 +154,8 @@ test.describe('doctor screens (mocked API)', () => {
     { path: '/doctor/start', heading: 'Register as a doctor', doctor: null },
     { path: '/doctor', heading: 'Dr. Ana Reyes', doctor: 'REGISTERED' as const },
     { path: '/doctor/edit', heading: 'Edit doctor profile', doctor: 'REGISTERED' as const },
+    { path: '/doctor/clinics', heading: 'Your clinics', doctor: 'VERIFIED' as const },
+    { path: '/doctor/services', heading: 'Services and fees', doctor: 'VERIFIED' as const },
   ]) {
     test(`${s.path}: renders, no horizontal scroll, no axe violations`, async ({ page }) => {
       await mockApi(page, { signedIn: true, doctor: s.doctor });
@@ -208,4 +210,28 @@ test('editing the doctor profile sends the licence only when typed and keeps the
     { specialty_id: 'sp-card', subspecialty_id: null, is_primary: true, board_certified: false },
     { specialty_id: 'sp-im', subspecialty_id: null, is_primary: false, board_certified: false },
   ]);
+});
+
+test('a verified doctor accepts a clinic invitation', async ({ page }) => {
+  await mockApi(page, { signedIn: true, doctor: 'VERIFIED' });
+  await page.goto('/doctor/clinics');
+  await page.getByRole('button', { name: 'Accept invitation' }).click({ timeout: 45_000 });
+  await expect(page.getByText('You now practise at Reyes Medical Center, Quezon City.', { exact: false })).toBeVisible();
+});
+
+test('a doctor adds a service with a fee in pesos, sent as centavos', async ({ page }) => {
+  await mockApi(page, { signedIn: true, doctor: 'VERIFIED' });
+  await page.goto('/doctor/services');
+  await expect(page.getByText('₱650.00', { exact: false })).toBeVisible({ timeout: 45_000 });
+
+  await page.getByLabel('Fee (₱)', { exact: true }).fill('65o');
+  await page.getByRole('button', { name: 'Add service' }).click();
+  await expect(page.getByText('Enter the fee in pesos, for example 650 or 650.50.')).toBeVisible();
+
+  await page.getByLabel('Service name', { exact: true }).fill('Follow-up visit');
+  await page.getByLabel('Fee (₱)', { exact: true }).fill('450.50');
+  const request = page.waitForRequest((r) => r.url().endsWith('/api/v1/doctors/me/services') && r.method() === 'POST');
+  await page.getByRole('button', { name: 'Add service' }).click();
+  expect((await request).postDataJSON()).toMatchObject({ consultation_type: 'IN_PERSON', clinic_location_id: 'loc1', name: 'Follow-up visit', fee_amount: 45050 });
+  await expect(page.getByText('Added Follow-up visit', { exact: false })).toBeVisible();
 });

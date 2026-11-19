@@ -56,6 +56,14 @@ export default function DoctorHome() {
         <Button label="Edit doctor profile" variant="secondary" onPress={() => router.push('/doctor/edit')} />
       </Card>
 
+      {p.onboarding_status === 'VERIFIED' || p.onboarding_status === 'ACTIVE' ? (
+        <Card title="Where you practise">
+          <Text style={styles.body}>Accept clinic invitations, then set your services and fees for each clinic and for online consultations.</Text>
+          <Button label="Your clinics" variant="secondary" onPress={() => router.push('/doctor/clinics')} />
+          <Button label="Services and fees" variant="secondary" onPress={() => router.push('/doctor/services')} />
+        </Card>
+      ) : null}
+
       <Card title="History">
         {p.verification_history.map((e, i) => (
           <Text key={i} style={styles.meta}>{formatManilaDate(e.occurred_at)} · {e.to_status.replace('_', ' ').toLowerCase()}{e.reason ? ` · ${e.reason}` : ''}</Text>
