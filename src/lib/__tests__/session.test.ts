@@ -189,3 +189,25 @@ describe('sign-out detail', () => {
     expect(session.getState()).toEqual({ status: 'signedOut', signOutReason: 'deletionRequested', signOutDetail: '2026-12-18T03:00:00Z' });
   });
 });
+
+describe('SessionManager request cancellation (search, increment 3.6)', () => {
+  it('keeps the abort signal through the bearer token and the 401 retry', async () => {
+    const seen: Request[] = [];
+    const baseFetch = jest.fn(async (req: Request) => {
+      seen.push(req);
+      if (req.url.endsWith('/auth/refresh')) return refreshed(1);
+      return req.headers.get('Authorization') === 'Bearer access-1' ? json(200, { ok: true }) : json(401, { code: 'UNAUTHENTICATED' });
+    });
+    const session = new SessionManager(API, baseFetch, memoryStore(), 'token');
+    await session.signIn({ access_token: 'access-0', refresh_token: 'refresh-0', device_id: 'device-1' });
+    const controller = new AbortController();
+
+    await session.fetch(new Request(`${API}/search/doctors?q=pedia`, { signal: controller.signal }));
+    controller.abort();
+
+    const searches = seen.filter((r) => r.url.includes('/search/doctors'));
+    expect(searches).toHaveLength(2); // first try, then the retry with the new token
+    for (const r of searches) expect(r.signal.aborted).toBe(true);
+  });
+});
+

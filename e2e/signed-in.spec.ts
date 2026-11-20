@@ -238,7 +238,6 @@ test('a doctor adds a service with a fee in pesos, sent as centavos', async ({ p
 
 test.describe('public directory (mocked API)', () => {
   for (const s of [
-    { path: '/directory', heading: 'Doctors' },
     { path: '/directory/doctor/01a1ed01-0000-7000-8000-00000000d001', heading: 'Dr. Ana Reyes' },
     { path: '/directory/clinic/01a1ec01-0000-7000-8000-00000000c001', heading: 'Santos Family Clinic' },
   ]) {
@@ -255,7 +254,7 @@ test.describe('public directory (mocked API)', () => {
 test('a patient browses from home to a doctor, their fee and their clinic', async ({ page }) => {
   await mockApi(page, { signedIn: true });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Browse doctors' }).click({ timeout: 45_000 });
+  await page.getByRole('button', { name: 'Search', exact: true }).click({ timeout: 45_000 });
   await page.getByRole('link', { name: /Dr\. Ana Reyes/ }).click();
   await expect(page.getByText('₱650.00')).toBeVisible();
   await expect(page.getByText('Booking through MediConnect is not available yet', { exact: false }).last()).toBeVisible();

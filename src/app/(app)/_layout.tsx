@@ -20,6 +20,7 @@ export default function AppLayout() {
       <Stack.Screen name="doctor/edit" options={{ title: 'Edit doctor profile' }} />
       <Stack.Screen name="doctor/clinics" options={{ title: 'Your clinics' }} />
       <Stack.Screen name="doctor/services" options={{ title: 'Services and fees' }} />
+      <Stack.Screen name="search" options={{ title: 'Find a doctor' }} />
       <Stack.Screen name="directory/index" options={{ title: 'Doctors' }} />
       <Stack.Screen name="directory/doctor/[id]" options={{ title: 'Doctor' }} />
       <Stack.Screen name="directory/clinic/[id]" options={{ title: 'Clinic' }} />

@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { BrandIcon, Button, Card, Notice, Screen, type BrandIconName } from '@/components/ui';
+import { BrandIcon, Button, Card, Notice, Screen, TextField, type BrandIconName } from '@/components/ui';
 import { fetchMe } from '@/features/auth/api';
 import { space, typography } from '@/theme/tokens';
 import { useThemedStyles, type ThemeColors } from '@/theme/useTheme';
@@ -11,7 +12,7 @@ import { useThemedStyles, type ThemeColors } from '@/theme/useTheme';
  * of them calls an endpoint that does not exist yet (development-roadmap.md).
  */
 const UPCOMING: readonly { icon: BrandIconName; title: string; body: string; phase: string }[] = [
-  { icon: 'find-a-doctor', title: 'Search for a doctor', body: 'Search by specialty, location, HMO and availability.', phase: 'Phase 3' },
+  { icon: 'find-a-doctor', title: 'More search filters', body: 'Filter doctors by HMO and by available dates and times.', phase: 'Phases 4 and 7' },
   { icon: 'book-appointment', title: 'Appointments', body: 'Book clinic visits and online consultations.', phase: 'Phases 4–6' },
   { icon: 'hospitals-clinics', title: 'Clinic walk-ins', body: 'Join a clinic queue and follow your place in line.', phase: 'Phase 5' },
   { icon: 'hmo-coverage', title: 'HMO memberships', body: 'Save your HMO card details for faster booking.', phase: 'Phase 7' },
@@ -21,18 +22,33 @@ export default function Home() {
   const styles = useThemedStyles(createStyles);
   const me = useQuery({ queryKey: ['me'], queryFn: fetchMe });
   const name = me.data?.profile?.first_name;
+  const [query, setQuery] = useState('');
+  const search = () => router.push(query.trim() ? { pathname: '/search', params: { q: query.trim() } } : '/search');
 
   return (
     <Screen topInset title={name ? `Hello, ${name}` : 'Hello'} subtitle="Welcome to MediConnect.">
       <Notice tone="warning" message="In an emergency, call 911 or go to the nearest emergency room. MediConnect is not for emergencies." />
-      <Card title="Doctors and clinics">
+      <Card title="Find a doctor">
         <View style={styles.item}>
           <BrandIcon name="find-a-doctor" size={40} />
           <View style={styles.itemText}>
-            <Text style={styles.body}>Browse doctors whose PRC licence was checked by MediConnect, with their clinics and fees.</Text>
+            <Text style={styles.body}>Search doctors whose PRC licence was checked by MediConnect, by name, specialty, clinic or city.</Text>
           </View>
         </View>
-        <Button label="Browse doctors" onPress={() => router.push('/directory')} />
+        <View accessibilityRole="search" style={styles.search}>
+          <TextField
+            label="Search doctors"
+            placeholder="For example pedia or Dr. Santos"
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={search}
+            returnKeyType="search"
+            autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={100}
+          />
+          <Button label="Search" onPress={search} />
+        </View>
       </Card>
       <Card title="Coming soon to MediConnect">
         <Text style={styles.soon}>Your account is ready. These features are on the way:</Text>
@@ -54,6 +70,7 @@ const createStyles = (c: ThemeColors) =>
   StyleSheet.create({
     body: { ...typography.body, color: c.textPrimary },
     soon: { ...typography.body, color: c.textSecondary },
+    search: { gap: space[3], paddingTop: space[3] },
     item: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3], paddingTop: space[3] },
     itemText: { flex: 1, gap: space[1] },
     itemTitle: { ...typography.label, color: c.textPrimary },

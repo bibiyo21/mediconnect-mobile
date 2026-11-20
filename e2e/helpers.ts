@@ -161,6 +161,28 @@ export async function mockApi(page: Page, { signedIn, doctor = null }: { signedI
     services = services.map((x) => (x.id === id ? next : x));
     return route.fulfill(ok(next));
   });
+  // Doctor search (3.6); test fixtures only. Sentinel queries give the other states.
+  const searchHit = {
+    doctor_id: publicDoctor.id, display_name: 'Dr. Ana Reyes', professional_title: 'MD', specialties: ['Pediatrics'], languages: ['en', 'fil'], years_experience: 8,
+    is_verified: true, offers_online: true, fee_from: { amount: 50000, currency: 'PHP', formatted: '₱500.00' },
+    locations: [{ clinic_id: publicClinic.id, clinic_name: 'Santos Family Clinic', clinic_location_id: 'loc1', location_name: 'Makati branch', city: 'Makati', fee_min: 65000, fee_max: 65000, distance_km: null }],
+  };
+  const searchMeta = (found: number, extra: object = {}) => ({ found, next_cursor: null, took_ms: 3, cache_hit: false, degraded: false, facets: {}, ...extra });
+  await page.route(/\/api\/v1\/search\/doctors(\?.*)?$/, (route) => {
+    const q = new URL(route.request().url()).searchParams.get('q') ?? '';
+    if (q === 'nobody') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: [], meta: searchMeta(0), message: null }) });
+    if (q === 'slow') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: [searchHit], meta: searchMeta(1, { degraded: true }), message: null }) });
+    if (q === 'broken') return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'Server error.', errors: {}, code: 'SERVER_ERROR' }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: [searchHit], meta: searchMeta(1), message: null }) });
+  });
+  await page.route(/\/api\/v1\/search\/specialties(\?.*)?$/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+    success: true,
+    data: [
+      { specialty_id: 'sp-ped', id: 'sp-ped', name: 'Pediatrics', kind: 'SPECIALTY', parent_name: null, doctor_count: 1 },
+      { specialty_id: 'sp-ped', id: 'sub-neo', name: 'Neonatology', kind: 'SUBSPECIALTY', parent_name: 'Pediatrics', doctor_count: 1 },
+    ],
+    meta: searchMeta(2), message: null,
+  }) }));
   await page.route('**/api/v1/auth/otp/verify', (route) => route.fulfill(ok({ verification_token: 'v'.repeat(64), expires_in_minutes: 10 })));
   await page.route('**/api/v1/auth/reset-password', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: {}, meta: {}, message: 'Your password was changed.' }) }),
