@@ -70,6 +70,36 @@ test.describe('/search (signed in, mocked API)', () => {
     await expect(page.getByRole('heading', { name: 'Dr. Ana Reyes', exact: true })).toBeVisible();
   });
 
+  test('shows the next open time and sends availability filters in Philippine time (4.10)', async ({ page }) => {
+    await openSearch(page);
+    await expect(page.getByText(/^Next open time: (Today|Tomorrow|\w{3} \d{1,2} \w{3}), 9:00 AM$/)).toBeVisible();
+    const request = page.waitForRequest((r) => r.url().includes('/search/doctors') && r.url().includes('available_time_from=06%3A00'));
+    await page.getByRole('radio', { name: 'Tomorrow' }).click();
+    await page.getByRole('radio', { name: 'Morning' }).click();
+    const url = new URL((await request).url());
+    expect(url.searchParams.get('available_date')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(url.searchParams.get('available_time_to')).toBe('12:00');
+    await expect(page.getByText(/Open times are a guide and can change/)).toBeVisible();
+    const sorted = page.waitForRequest((r) => r.url().includes('/search/doctors') && r.url().includes('sort=next_available'));
+    await page.getByRole('radio', { name: 'Soonest open time' }).click();
+    await sorted;
+    expect(await axeViolations(page)).toEqual([]);
+  });
+
+  test('a doctor profile shows open times by day as a guide, not as booking buttons (4.10)', async ({ page }) => {
+    await mockApi(page, { signedIn: true });
+    await page.goto('/directory/doctor/01a1ed01-0000-7000-8000-00000000d001');
+    await expect(page.getByRole('heading', { name: 'Open times', exact: true })).toBeVisible({ timeout: 45_000 });
+    const list = page.getByRole('list', { name: /^Open times on / });
+    await expect(list.getByRole('listitem')).toHaveText(['9:00 AM', '9:25 AM', '9:50 AM']);
+    await expect(page.getByRole('button', { name: '9:00 AM' })).toHaveCount(0);
+    await expect(page.getByText(/A guide only: times change as patients book/)).toBeVisible();
+    await page.getByRole('radio').nth(1).click();
+    await expect(list.getByRole('listitem')).toHaveCount(3);
+    await expectNoHorizontalScroll(page);
+    expect(await axeViolations(page)).toEqual([]);
+  });
+
   test('the old directory address opens search', async ({ page }) => {
     await openSearch(page, '/directory');
     await expect(page).toHaveURL(/\/search/);

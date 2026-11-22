@@ -161,11 +161,19 @@ export async function mockApi(page: Page, { signedIn, doctor = null }: { signedI
     services = services.map((x) => (x.id === id ? next : x));
     return route.fulfill(ok(next));
   });
+  // Open times (4.10): two Manila days, two and three days from now, 9:00, 9:25 and 9:50 AM (01:00Z...). Test fixtures only.
+  const manilaDay = (offset: number) => new Date(Date.now() + 8 * 3600 * 1000 + offset * 86400 * 1000).toISOString().slice(0, 10);
+  const openDays = [2, 3].map((offset) => ({ date: manilaDay(offset), times: ['01:00', '01:25', '01:50'].map((t) => `${manilaDay(offset)}T${t}:00Z`) }));
+  const openTimes = openDays.flatMap((d) => d.times.map((starts, i) => ({
+    slot_id: `${d.date}-${i}`, starts_at: starts, ends_at: starts, local_date: d.date, timezone: 'Asia/Manila', clinic_location_id: 'loc1', doctor_service_id: 'ps1', service_name: 'Consultation', consultation_type: 'IN_PERSON',
+  })));
+  await page.route(/\/api\/v1\/doctors\/01a1ed01-0000-7000-8000-00000000d001\/availability(\?.*)?$/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: openTimes, meta: { advisory: true }, message: null }) }));
   // Doctor search (3.6); test fixtures only. Sentinel queries give the other states.
   const searchHit = {
     doctor_id: publicDoctor.id, display_name: 'Dr. Ana Reyes', professional_title: 'MD', specialties: ['Pediatrics'], languages: ['en', 'fil'], years_experience: 8,
     is_verified: true, offers_online: true, fee_from: { amount: 50000, currency: 'PHP', formatted: '₱500.00' },
-    locations: [{ clinic_id: publicClinic.id, clinic_name: 'Santos Family Clinic', clinic_location_id: 'loc1', location_name: 'Makati branch', city: 'Makati', fee_min: 65000, fee_max: 65000, distance_km: null }],
+    locations: [{ clinic_id: publicClinic.id, clinic_name: 'Santos Family Clinic', clinic_location_id: 'loc1', location_name: 'Makati branch', city: 'Makati', fee_min: 65000, fee_max: 65000, next_available_at: openDays[0].times[0], distance_km: null }],
+    next_available_at: openDays[0].times[0],
   };
   const searchMeta = (found: number, extra: object = {}) => ({ found, next_cursor: null, took_ms: 3, cache_hit: false, degraded: false, facets: {}, ...extra });
   await page.route(/\/api\/v1\/search\/doctors(\?.*)?$/, (route) => {

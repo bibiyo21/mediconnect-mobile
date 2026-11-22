@@ -6,13 +6,18 @@ import { Button, Card, ChoiceGroup, Notice, Screen, StateView, TextField } from 
 import { BOOKING_NOTICE } from '@/features/directory/api';
 import {
   DEGRADED_NOTICE,
+  formatNextOpen,
   searchDoctors,
+  TIME_WINDOWS,
   suggestionLabel,
   suggestSpecialties,
   toSpecialtyFilter,
   type ConsultationMode,
   type DoctorResult,
+  type SearchDay,
   type SearchFilters,
+  type SearchSort,
+  type SearchTime,
 } from '@/features/search/api';
 import { ApiError } from '@mediconnect/api-client';
 import { userMessage } from '@/lib/errors';
@@ -24,6 +29,22 @@ const MODES: readonly { value: ConsultationMode; label: string }[] = [
   { value: 'ANY', label: 'Any' },
   { value: 'IN_PERSON', label: 'In person' },
   { value: 'ONLINE', label: 'Online' },
+];
+
+const DAYS: readonly { value: SearchDay; label: string }[] = [
+  { value: 'ANY', label: 'Any day' },
+  { value: 'TODAY', label: 'Today' },
+  { value: 'TOMORROW', label: 'Tomorrow' },
+];
+
+const TIMES: readonly { value: SearchTime; label: string }[] = [
+  { value: 'ANY', label: 'Any time' },
+  ...(Object.entries(TIME_WINDOWS) as [Exclude<SearchTime, 'ANY'>, (typeof TIME_WINDOWS)[keyof typeof TIME_WINDOWS]][]).map(([value, w]) => ({ value, label: w.label })),
+];
+
+const SORTS: readonly { value: SearchSort; label: string }[] = [
+  { value: 'relevance', label: 'Best match' },
+  { value: 'next_available', label: 'Soonest open time' },
 ];
 
 const searchError = (error: unknown) =>
@@ -40,13 +61,16 @@ export default function Search() {
   const [city, setCity] = useState('');
   const [mode, setMode] = useState<ConsultationMode>('ANY');
   const [specialty, setSpecialty] = useState<SearchFilters['specialty']>(null);
+  const [day, setDay] = useState<SearchDay>('ANY');
+  const [time, setTime] = useState<SearchTime>('ANY');
+  const [sort, setSort] = useState<SearchSort>('relevance');
 
   // Typing waits for the debounce; clearing a field applies at once (no stale request in between).
   const typedQ = useDebouncedValue(text);
   const typedCity = useDebouncedValue(city);
   const q = text.trim() === '' ? '' : typedQ;
   const debouncedCity = city.trim() === '' ? '' : typedCity;
-  const filters = useMemo<SearchFilters>(() => ({ q, city: debouncedCity, mode, specialty }), [q, debouncedCity, mode, specialty]);
+  const filters = useMemo<SearchFilters>(() => ({ q, city: debouncedCity, mode, specialty, day, time, sort }), [q, debouncedCity, mode, specialty, day, time, sort]);
 
   const suggestions = useQuery({
     queryKey: ['search', 'specialties', q.trim().toLowerCase()],
@@ -114,6 +138,10 @@ export default function Search() {
           ) : null}
           <TextField label="City" placeholder="For example Makati" value={city} onChangeText={setCity} autoCorrect={false} />
           <ChoiceGroup label="Consultation" options={MODES} value={mode} onChange={setMode} />
+          <ChoiceGroup label="Open times" options={DAYS} value={day} onChange={setDay} />
+          <ChoiceGroup label="Time of day" options={TIMES} value={time} onChange={setTime} />
+          <ChoiceGroup label="Sort by" options={SORTS} value={sort} onChange={setSort} />
+          {day !== 'ANY' || time !== 'ANY' || sort === 'next_available' ? <Text style={styles.meta}>Open times are a guide and can change; the clinic confirms every booking.</Text> : null}
         </View>
       </Card>
 
@@ -150,12 +178,14 @@ export default function Search() {
 function ResultCard({ doctor: d, styles }: { doctor: DoctorResult; styles: ReturnType<typeof createStyles> }) {
   const where = d.locations.length ? d.locations.map((l) => `${l.clinic_name}, ${l.city}`).join(' · ') : null;
   const how = [where, d.offers_online ? 'Online consultations' : null].filter(Boolean).join(' · ');
-  const label = [d.display_name, d.specialties.join(', '), d.fee_from ? `fees from ${d.fee_from.formatted}` : null].filter(Boolean).join(', ');
+  const next = formatNextOpen(d.next_available_at);
+  const label = [d.display_name, d.specialties.join(', '), d.fee_from ? `fees from ${d.fee_from.formatted}` : null, next ? `next open time ${next}` : null].filter(Boolean).join(', ');
   return (
     <Pressable role="link" accessibilityLabel={label} onPress={() => router.push(`/directory/doctor/${d.doctor_id}`)} style={({ pressed }) => [styles.item, pressed && styles.pressed]}>
       <Text style={styles.name}>{d.display_name}</Text>
       <Text style={styles.meta}>{[d.professional_title, d.specialties.join(', ')].filter(Boolean).join(' · ') || 'Doctor'}</Text>
       {how ? <Text style={styles.meta}>{how}</Text> : null}
+      {next ? <Text style={styles.next}>Next open time: {next}</Text> : null}
       <View style={styles.row}>
         {d.fee_from ? <Text style={styles.fee}>From {d.fee_from.formatted}</Text> : null}
         {d.is_verified ? <Text style={styles.badge}>PRC licence checked</Text> : null}
@@ -183,4 +213,5 @@ const createStyles = (c: ThemeColors) =>
     row: { flexDirection: 'row', flexWrap: 'wrap', gap: space[3], paddingTop: space[1] },
     fee: { ...typography.small, color: c.textPrimary },
     badge: { ...typography.small, color: c.success },
+    next: { ...typography.small, color: c.textPrimary },
   });
