@@ -61,6 +61,8 @@ export default function DoctorHome() {
           <Text style={styles.body}>Accept clinic invitations, then set your services and fees for each clinic and for online consultations.</Text>
           <Button label="Your clinics" variant="secondary" onPress={() => router.push('/doctor/clinics')} />
           <Button label="Services and fees" variant="secondary" onPress={() => router.push('/doctor/services')} />
+          <Button label="Weekly schedule" variant="secondary" onPress={() => router.push('/doctor/schedule')} />
+          <Button label="Time off and extra hours" variant="secondary" onPress={() => router.push('/doctor/time-off')} />
         </Card>
       ) : null}
 
