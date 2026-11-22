@@ -41,14 +41,8 @@ export interface ExceptionInput {
   reason: string | null;
 }
 
-export interface OpenTime {
-  slot_id: string;
-  starts_at: string;
-  local_date: string;
-  service_name: string;
-  consultation_type: string;
-  clinic_location_id: string | null;
-}
+/** One advisory open time, typed by the backend contract (AvailabilitySlotResource). */
+export type OpenTime = components['schemas']['AvailabilitySlotResource'];
 
 export async function fetchServiceModes(): Promise<ServiceMode[]> {
   return unwrap(await api.GET('/doctors/me/service-modes'));
@@ -100,6 +94,5 @@ export async function cancelException(id: string): Promise<void> {
 
 /** The public, advisory open times patients see (only once the doctor is ACTIVE). */
 export async function fetchOpenTimes(doctorId: string, from: string, to: string): Promise<OpenTime[]> {
-  // The contract types this list loosely (a cached closure), so narrow it here to the documented fields.
-  return unwrap(await api.GET('/doctors/{doctorId}/availability', { params: { path: { doctorId }, query: { from, to } } })) as unknown as OpenTime[];
+  return unwrap(await api.GET('/doctors/{doctorId}/availability', { params: { path: { doctorId }, query: { from, to } } }));
 }
