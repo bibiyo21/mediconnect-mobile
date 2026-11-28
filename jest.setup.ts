@@ -23,6 +23,7 @@ const realtimeFake = {
   joined: [] as string[],
   listens: [] as { channel: string; event: string; handler: (payload: unknown) => void }[],
   left: [] as string[],
+  subscribedHandlers: [] as { channel: string; handler: () => void }[],
   disconnects: 0,
   constructed: 0,
 };
@@ -59,10 +60,15 @@ for (const path of echoPaths) {
     default: class FakeEcho {
       join(channel: string) {
         realtimeFake.joined.push(channel);
-        return {
+        const presenceChannel = {
           listen: (event: string, handler: (payload: unknown) => void) => realtimeFake.listens.push({ channel, event, handler }),
+          subscribed: (handler: () => void) => {
+            realtimeFake.subscribedHandlers.push({ channel, handler });
+            return presenceChannel;
+          },
           stopListening: () => undefined,
         };
+        return presenceChannel;
       }
       leave(channel: string) {
         realtimeFake.left.push(channel);

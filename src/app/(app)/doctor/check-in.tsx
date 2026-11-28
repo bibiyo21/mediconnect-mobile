@@ -28,7 +28,7 @@ export default function CheckIn() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: presenceKeys.me });
       void queryClient.invalidateQueries({ queryKey: presenceKeys.day });
-      // dismissTo pops this screen and the clinic day beneath it, so the stack keeps one clinic day.
+      // dismissTo stops at the clinic day already in the stack (or replaces this screen when it is not there), so the stack keeps one clinic day.
       router.dismissTo('/doctor/presence');
     },
     onError: (error) => {

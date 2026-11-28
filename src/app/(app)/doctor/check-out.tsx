@@ -179,7 +179,7 @@ export default function CheckOut() {
               <Notice key={`${b.code}-${i}`} tone="warning" message={checkOutBlockText(b.code, b.reason_code)} />
             ))
           )}
-          {blocked ? <Text style={styles.meta}>Finish the item above, then open this screen again to check out.</Text> : null}
+          {blocked ? <Text style={styles.meta}>Finish the item above. This screen refreshes when you come back to it.</Text> : null}
           <Button label="Next" onPress={() => dispatch({ type: 'next', blocked })} disabled={blocked || offline} />
           <Button label="Back" variant="secondary" onPress={() => dispatch({ type: 'back' })} />
         </Card>

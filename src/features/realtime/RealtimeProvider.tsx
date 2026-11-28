@@ -11,7 +11,7 @@ import { createAppRealtime } from '@/lib/realtime';
 import { refetchIntervalFor, shouldRefetch, STATUS_CHANGED_NOTICE_TYPES } from './refetch';
 
 interface RealtimeStatus {
-  /** True only while the socket is connected AND no channel was refused. Without it, the app polls. */
+  /** True only while the socket is connected, no channel was refused, and every channel is confirmed by the server. Without it, the app polls. */
   live: boolean;
   /** Pass to a query's refetchInterval: 30 s while paused, off while live. */
   refetchInterval: number | false;
@@ -30,10 +30,16 @@ const RealtimeContext = createContext<RealtimeStatus>({
 /** A 401 on channel auth re-checks the session at most once per this window (no retry loop). */
 const REAUTH_COOLDOWN_MS = 60_000;
 
+/** The user channel and the doctor channel. Live needs both confirmed on the current socket. */
+const CHANNEL_COUNT = 2;
+
 /** Query keys the doctor screens share, refetched on reconnect, foreground and hints. */
 const DOCTOR_DATA_PREFIXES = [presenceKeys.me, presenceKeys.day, presenceKeys.previewPrefix, ['walkin-board']] as const;
 
-/** Held walk-in board versions per queue (queue_version is per queue, and queues are per day). Written by the queue screen. */
+/**
+ * Held walk-in board versions per queue (queue_version is per queue, and queues are per day). Written here when a hint
+ * triggers a refetch, so an older hint for the same queue is ignored. Cleared on cleanup.
+ */
 export const heldBoardVersions = new Map<string, number>();
 
 export function invalidateDoctorData(queryClient: QueryClient): void {
@@ -58,6 +64,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   const [state, setState] = useState<RealtimeConnectionState>('unavailable');
   const [refused, setRefused] = useState(false);
+  const [confirmed, setConfirmed] = useState(0);
   const [generation, setGeneration] = useState(0);
   const [statusChanged, setStatusChanged] = useState(false);
   const lastReauth = useRef(0);
@@ -65,15 +72,20 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isDoctor || !userId || !doctorProfileId) return;
 
+    let disposed = false;
+    const confirmedChannels = new Set<string>();
+
     const reauthorise = () => {
       const now = Date.now();
       if (now - lastReauth.current < REAUTH_COOLDOWN_MS) return;
       lastReauth.current = now;
-      // The access token is stale: the session check decides. A real 401 signs out; otherwise rebuild the socket.
+      // The access token is stale: the session check decides, then the socket is rebuilt.
       fetchMe().then(
         () => setGeneration((g) => g + 1),
         (error: unknown) => {
-          if (error instanceof ApiError && error.status === 401) void session.signOut('expired');
+          // Cookie mode only. In token mode SessionManager owns the decision: a transient refresh failure
+          // (429, 5xx, offline) keeps the session, and a refused refresh has already signed out.
+          if (session.mode === 'cookie' && error instanceof ApiError && error.status === 401) void session.signOut('expired');
         },
       );
     };
@@ -81,6 +93,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     const client: RealtimeClient | null = createAppRealtime({
       // Status only, never the channel detail: a 403 (no ACTIVE assignment) stays quiet and keeps polling.
       onSubscriptionError: (_channel, status) => {
+        if (disposed) return;
         setRefused(true);
         if (status === 401) reauthorise();
       },
@@ -89,15 +102,24 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     if (!client) return;
 
     setRefused(false);
+    setConfirmed(0);
     const stops: (() => void)[] = [];
     let last: RealtimeConnectionState | null = null;
     let everConnected = false;
 
     const cleanup = () => {
+      disposed = true;
       for (const stop of stops) stop();
       heldBoardVersions.clear();
       client.disconnect();
       setState('unavailable');
+      setConfirmed(0);
+    };
+
+    const confirm = (channel: string) => () => {
+      if (disposed) return;
+      confirmedChannels.add(channel);
+      setConfirmed(confirmedChannels.size);
     };
 
     stops.push(
@@ -105,28 +127,45 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         const before = last;
         last = next;
         setState(next);
-        if (next === 'connected') {
-          // Reconnect: whatever changed while the socket was down is fetched again. The first connect needs no refetch.
-          if (everConnected && before !== 'connected') invalidateDoctorData(queryClient);
-          everConnected = true;
+        if (next !== 'connected') {
+          // pusher-js re-subscribes after a reconnect, and each channel is confirmed again before it counts as live.
+          confirmedChannels.clear();
+          setConfirmed(0);
+          return;
         }
+        // Reconnect: whatever changed while the socket was down is fetched again. The first connect needs no refetch.
+        if (everConnected && before !== 'connected') invalidateDoctorData(queryClient);
+        everConnected = true;
       }),
     );
 
     try {
+      const userChannel = `user.${userId}`;
       stops.push(
-        client.subscribe(`user.${userId}`, ['NotificationCreated'], (_event, hint) => {
-          if (STATUS_CHANGED_NOTICE_TYPES.has(hint.type)) setStatusChanged(true);
-          invalidateDoctorData(queryClient);
-        }),
+        client.subscribe(
+          userChannel,
+          ['NotificationCreated'],
+          (_event, hint) => {
+            if (STATUS_CHANGED_NOTICE_TYPES.has(hint.type)) setStatusChanged(true);
+            invalidateDoctorData(queryClient);
+          },
+          confirm(userChannel),
+        ),
       );
+      const doctorChannel = `doctor.${doctorProfileId}`;
       stops.push(
-        client.subscribe(`doctor.${doctorProfileId}`, ['WalkInRegistered', 'WalkInQueueUpdated'], (_event, hint) => {
-          const held = heldBoardVersions.get(hint.queue_id);
-          if (shouldRefetch(held, hint.queue_version)) {
-            void queryClient.invalidateQueries({ queryKey: ['walkin-board'] });
-          }
-        }),
+        client.subscribe(
+          doctorChannel,
+          ['WalkInRegistered', 'WalkInQueueUpdated'],
+          (_event, hint) => {
+            const held = heldBoardVersions.get(hint.queue_id);
+            if (shouldRefetch(held, hint.queue_version)) {
+              heldBoardVersions.set(hint.queue_id, hint.queue_version);
+              void queryClient.invalidateQueries({ queryKey: ['walkin-board'] });
+            }
+          },
+          confirm(doctorChannel),
+        ),
       );
     } catch (error) {
       // A channel or event that the contract does not allow is a programming error: tidy up, then surface it.
@@ -146,15 +185,14 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const value = useMemo<RealtimeStatus>(() => {
-    // Live means connected and every subscription authorised (no refusal since this socket was built).
-    const live = state === 'connected' && !refused;
+    const live = state === 'connected' && !refused && confirmed >= CHANNEL_COUNT;
     return {
       live,
       refetchInterval: refetchIntervalFor(live),
       statusChanged,
       clearStatusChanged: () => setStatusChanged(false),
     };
-  }, [state, refused, statusChanged]);
+  }, [state, refused, confirmed, statusChanged]);
 
   return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>;
 }

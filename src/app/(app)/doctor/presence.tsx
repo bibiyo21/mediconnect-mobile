@@ -109,10 +109,10 @@ export default function ClinicDay() {
   const location: DayLocation | undefined = day.data.locations.find((l) => l.clinic_location_id === p.clinic_location_id);
   const busy = step.isPending || breakStart.isPending;
   const writesDisabled = offline || busy;
-  const coveringBreak = (location?.scheduled_breaks ?? []).find(
-    (b) => Date.parse(b.starts_at) <= mountedAt && mountedAt < Date.parse(b.ends_at),
-  );
-  const suggested = coveringBreak ? Math.max(1, Math.round((Date.parse(coveringBreak.ends_at) - mountedAt) / 60000)) : undefined;
+  // The day query time is the as-of time, so a refetch after a long mount recomputes the suggestion.
+  const asOf = day.dataUpdatedAt > 0 ? day.dataUpdatedAt : mountedAt;
+  const coveringBreak = (location?.scheduled_breaks ?? []).find((b) => Date.parse(b.starts_at) <= asOf && asOf < Date.parse(b.ends_at));
+  const suggested = coveringBreak ? Math.max(1, Math.round((Date.parse(coveringBreak.ends_at) - asOf) / 60000)) : undefined;
 
   return (
     <Screen title="Clinic day" subtitle={day.data.local_date ? `Today, ${day.data.local_date} (Manila time)` : undefined}>
@@ -178,6 +178,7 @@ export default function ClinicDay() {
       </Card>
 
       <Button label="Refresh" variant="secondary" onPress={refetchAll} />
+      {p.clinic_location_id ? <Button label="Open walk-in queue" variant="secondary" onPress={() => router.push('/doctor/queue')} /> : null}
 
       <Card title="Today's clinic shifts">
         {day.data.locations.length === 0 ? (
