@@ -98,11 +98,11 @@ test('the editor validates locally, sends the version, and recovers from a concu
   await expect(page.getByLabel('Name')).toHaveValue('Makati clinic', { timeout: 45_000 });
   await expect(page.getByText(/About 7 appointments each Monday/)).toBeVisible();
 
-  await page.getByLabel('To').first().fill('08:00');
+  await page.getByLabel('To', { exact: true }).first().fill('08:00');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('The shift must end after it starts.')).toBeVisible();
 
-  await page.getByLabel('To').first().fill('12:00');
+  await page.getByLabel('To', { exact: true }).first().fill('12:00');
   const save = page.waitForRequest((r) => r.url().endsWith('/schedules/sch1') && r.method() === 'PATCH');
   await page.getByRole('button', { name: 'Save changes' }).click();
   const sent = await save;
