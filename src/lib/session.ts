@@ -116,6 +116,18 @@ export class SessionManager {
     return (await this.refresh()) ? this.baseFetch(this.withToken(retry)) : response;
   };
 
+  /**
+   * The in-memory access token for the realtime authorizer (native only). Refreshes first when
+   * the token is missing. Never stored; null on web (the cookie carries the session there).
+   */
+  async currentAccessToken(): Promise<string | null> {
+    if (this.mode !== 'token') return null;
+    if (!this.accessToken && this.stored) {
+      await this.refresh();
+    }
+    return this.accessToken;
+  }
+
   /** Single-flight refresh. Resolves true when a new access token is available. */
   refresh(): Promise<boolean> {
     this.refreshing ??= this.doRefresh().finally(() => {

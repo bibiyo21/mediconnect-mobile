@@ -15,3 +15,14 @@ export const LEGAL_VERSIONS = {
 
 /** Version of the guardian attestation shown when adding a dependent (the API refuses others). */
 export const GUARDIAN_ATTESTATION_VERSION = process.env.EXPO_PUBLIC_GUARDIAN_ATTESTATION_VERSION ?? 'draft-2026-11';
+
+/**
+ * Reverb (realtime) settings. Public values only: the app key is visible in the bundle by design.
+ * With no app key the app runs without live updates and polls instead ("Updates paused").
+ */
+export const REALTIME = {
+  appKey: process.env.EXPO_PUBLIC_REVERB_APP_KEY ?? '',
+  host: process.env.EXPO_PUBLIC_REVERB_HOST ?? '',
+  port: process.env.EXPO_PUBLIC_REVERB_PORT ? Number(process.env.EXPO_PUBLIC_REVERB_PORT) : undefined,
+  scheme: process.env.EXPO_PUBLIC_REVERB_SCHEME === 'https' ? ('https' as const) : ('http' as const),
+};

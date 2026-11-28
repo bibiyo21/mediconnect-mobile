@@ -28,6 +28,12 @@ export default function Home() {
   return (
     <Screen topInset title={name ? `Hello, ${name}` : 'Hello'} subtitle="Welcome to MediConnect.">
       <Notice tone="warning" message="In an emergency, call 911 or go to the nearest emergency room. MediConnect is not for emergencies." />
+      {me.data?.roles.includes('DOCTOR') ? (
+        <Card title="Clinic day">
+          <Text style={styles.body}>Check in or out, take a break, and see today’s shifts at your clinics.</Text>
+          <Button label="Open clinic day" onPress={() => router.push('/doctor/presence')} />
+        </Card>
+      ) : null}
       <Card title="Find a doctor">
         <View style={styles.item}>
           <BrandIcon name="find-a-doctor" size={40} />

@@ -59,6 +59,7 @@ export default function DoctorHome() {
       {p.onboarding_status === 'VERIFIED' || p.onboarding_status === 'ACTIVE' ? (
         <Card title="Where you practise">
           <Text style={styles.body}>Accept clinic invitations, then set your services and fees for each clinic and for online consultations.</Text>
+          <Button label="Clinic day" onPress={() => router.push('/doctor/presence')} />
           <Button label="Your clinics" variant="secondary" onPress={() => router.push('/doctor/clinics')} />
           <Button label="Services and fees" variant="secondary" onPress={() => router.push('/doctor/services')} />
           <Button label="Weekly schedule" variant="secondary" onPress={() => router.push('/doctor/schedule')} />
