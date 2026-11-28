@@ -19,6 +19,9 @@ const ACTION_LABEL: Record<QueueAction, (label: string) => string> = {
   resume: (l) => `Resume consultation with ${l}`,
 };
 
+/** Skip and no-show are kept apart from the main actions, so a tap meant for a call does not land on them. */
+const DESTRUCTIVE = new Set<QueueAction>(['skip', 'noShow']);
+
 const STATUS_TEXT: Record<WalkInEntry['status'], string> = {
   REGISTERED: 'Not arrived yet',
   WAITING: 'Waiting',
@@ -43,10 +46,14 @@ interface Props {
 /** One patient in the doctor's queue. Shows names (the doctor's own queue) and the server's estimate and HMO label only. */
 export function EntryRow({ entry, actions, consultationNote, disabled, pendingAction, onAction }: Props) {
   const styles = useThemedStyles(createStyles);
-  const name = entry.name ?? (entry.is_guest ? 'Guest' : 'Patient');
+  const name = entry.name ?? (entry.is_guest ? 'Guest' : 'Name not given');
   const priority = entry.priority_level !== 'NORMAL' && entry.priority_reason_code ? PRIORITY_REASON_LABELS[entry.priority_reason_code] : null;
-  const estimate = estimateText(entry);
+  // An estimate only means something before the patient is called.
+  const waitingStatus = entry.status === 'WAITING' || entry.status === 'REGISTERED';
+  const estimate = waitingStatus ? estimateText(entry) : null;
   const hmo = hmoText(entry);
+  const main = actions.filter((a) => !DESTRUCTIVE.has(a));
+  const destructive = actions.filter((a) => DESTRUCTIVE.has(a));
 
   return (
     <View style={styles.row}>
@@ -61,16 +68,31 @@ export function EntryRow({ entry, actions, consultationNote, disabled, pendingAc
       {consultationNote ? <Text style={styles.meta}>{consultationNote}</Text> : null}
       {estimate ? <Text style={styles.meta}>{estimate}</Text> : null}
       {hmo ? <Text style={styles.meta}>{hmo}</Text> : null}
-      {actions.map((action) => (
+      {/* One primary action per row (the first main action); the rest are secondary. */}
+      {main.map((action, index) => (
         <Button
           key={action}
           label={ACTION_LABEL[action](entry.label)}
-          variant={action === 'noShow' || action === 'skip' ? 'secondary' : 'primary'}
+          variant={index === 0 ? 'primary' : 'secondary'}
           loading={pendingAction === action}
           disabled={disabled || pendingAction !== null}
           onPress={() => onAction(action)}
         />
       ))}
+      {destructive.length > 0 ? (
+        <View style={styles.destructive}>
+          {destructive.map((action) => (
+            <Button
+              key={action}
+              label={ACTION_LABEL[action](entry.label)}
+              variant="secondary"
+              loading={pendingAction === action}
+              disabled={disabled || pendingAction !== null}
+              onPress={() => onAction(action)}
+            />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -78,6 +100,7 @@ export function EntryRow({ entry, actions, consultationNote, disabled, pendingAc
 const createStyles = (c: ThemeColors) =>
   StyleSheet.create({
     row: { gap: space[1], paddingVertical: space[2] },
+    destructive: { gap: space[3], paddingTop: space[2] },
     title: { ...typography.label, color: c.textPrimary },
     meta: { ...typography.small, color: c.textMuted },
   });

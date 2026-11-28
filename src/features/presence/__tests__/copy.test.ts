@@ -38,7 +38,7 @@ describe('presenceErrorMessage', () => {
   });
 
   it('adds the opening time for outside_hours when known', () => {
-    expect(checkInReasonText('outside_hours', '08:30')).toBe('You are outside your shift window. Check-in opens at 08:30.');
+    expect(checkInReasonText('outside_hours', '08:30')).toBe('You are outside your scheduled hours here. Check-in opens at 08:30.');
   });
 
   it('falls back to the shared message for other errors and non-API errors', () => {
@@ -56,7 +56,7 @@ describe('presenceErrorMessage', () => {
 describe('checkOutBlockText', () => {
   it('names the consultation states without ids', () => {
     expect(checkOutBlockText('ACTIVE_CONSULTATION', 'in_progress')).toBe('A consultation is in progress. Finish it first.');
-    expect(checkOutBlockText('ACTIVE_CONSULTATION', 'interrupted')).toBe('A consultation is interrupted. Resume and end it first.');
+    expect(checkOutBlockText('ACTIVE_CONSULTATION', 'interrupted')).toBe('A consultation is interrupted. Resume it, then end it first.');
     expect(checkOutBlockText('ACTIVE_CONSULTATION', 'called')).toBe('A patient is called. Start, skip or mark no-show first.');
   });
 

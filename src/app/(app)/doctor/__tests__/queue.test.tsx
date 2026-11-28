@@ -121,13 +121,16 @@ describe('override confirm (urgent call during a protected window)', () => {
     await renderScreen();
     await tap(await screen.findByRole('button', { name: 'Call A-01' }));
 
-    expect(await screen.findByText('Call during a protected time?')).toBeTruthy();
-    expect(screen.getByText(/Appointment times are protected unless the clinic prioritises an urgent patient/)).toBeTruthy();
-    expect(screen.getByText(/This queue is not an emergency service/)).toBeTruthy();
+    expect(await screen.findByText('Call this patient now?')).toBeTruthy();
+    expect(screen.getByText(/This time is reserved for a booked patient/)).toBeTruthy();
+    expect(screen.getByText('Queue reason: Pregnant')).toBeTruthy();
     expect(mocked.callEntry).toHaveBeenCalledTimes(1);
     expect(mocked.callEntry.mock.calls[0][2]).toBeNull();
 
-    await tap(screen.getByRole('button', { name: 'Call A-01 with override' }));
+    // No reason is pre-selected: the call stays disabled until the doctor picks one.
+    expect(screen.getByRole('button', { name: 'Call A-01 now' })).toBeDisabled();
+    await tap(screen.getByRole('radio', { name: 'Pregnant' }));
+    await tap(screen.getByRole('button', { name: 'Call A-01 now' }));
     await waitFor(() => expect(mocked.callEntry).toHaveBeenCalledTimes(2));
     expect(mocked.callEntry.mock.calls[1][0]).toBe('e1');
     expect(mocked.callEntry.mock.calls[1][2]).toBe('PREGNANT');
@@ -139,8 +142,8 @@ describe('override confirm (urgent call during a protected window)', () => {
     mocked.callEntry.mockRejectedValueOnce(new WalkInError(409, { code: 'APPOINTMENT_WINDOW_PROTECTED', message: 'x', reason_code: 'appointment' } as never));
     await renderScreen();
     await tap(await screen.findByRole('button', { name: 'Call A-02' }));
-    expect(await screen.findByText(/Appointment times are protected/)).toBeTruthy();
-    expect(screen.queryByText('Call during a protected time?')).toBeNull();
+    expect(await screen.findByText(/A booked patient's time is reserved/)).toBeTruthy();
+    expect(screen.queryByText('Call this patient now?')).toBeNull();
   });
 
   it('"Do not call" closes the confirm step without a write', async () => {
@@ -150,7 +153,7 @@ describe('override confirm (urgent call during a protected window)', () => {
     await renderScreen();
     await tap(await screen.findByRole('button', { name: 'Call A-03' }));
     await tap(await screen.findByRole('button', { name: 'Do not call' }));
-    await waitFor(() => expect(screen.queryByText('Call during a protected time?')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Call this patient now?')).toBeNull());
     expect(mocked.callEntry).toHaveBeenCalledTimes(1);
   });
 });
@@ -189,8 +192,10 @@ describe('pause and open the queue', () => {
     mocked.fetchBoard.mockResolvedValue(board([entry({ id: 'p3', label: 'A-22' })]));
     mocked.pauseQueue.mockRejectedValueOnce(new WalkInError(409, { code: 'INVALID_STATE_TRANSITION', message: 'x' } as never));
     await renderScreen();
+    await waitFor(() => expect(mocked.fetchBoard).toHaveBeenCalledTimes(1));
     await tap(await screen.findByRole('button', { name: 'Pause new walk-ins' }));
     expect(await screen.findByText('That action no longer applies. The list has been refreshed.')).toBeTruthy();
+    await waitFor(() => expect(mocked.fetchBoard).toHaveBeenCalledTimes(2));
   });
 
   it('a closed queue offers neither pause nor open', async () => {
@@ -248,6 +253,8 @@ describe('priority dialog', () => {
     await renderScreen();
     await tap(await screen.findByRole('button', { name: 'Change priority for A-10' }));
     expect(await screen.findByText(/It is not a clinical triage decision\./)).toBeTruthy();
+    // The emergency sentence must be separated from the line before it (a JSX newline drops the space).
+    expect(screen.getByText(/appointment time\. For a medical emergency/)).toBeTruthy();
   });
 
   it('has no free-text field and sends the level with a reason code only', async () => {
@@ -259,7 +266,7 @@ describe('priority dialog', () => {
     expect(await screen.findByText('Priority for A-04')).toBeTruthy();
     expect(screen.queryByRole('textbox')).toBeNull();
 
-    await tap(screen.getByRole('radio', { name: 'Urgent' }));
+    await tap(screen.getByRole('radio', { name: 'Move to front' }));
     await tap(await screen.findByRole('radio', { name: 'Doctor requested' }));
     await tap(screen.getByRole('button', { name: 'Save priority' }));
     await waitFor(() => expect(mocked.setEntryPriority).toHaveBeenCalledTimes(1));
@@ -270,10 +277,22 @@ describe('priority dialog', () => {
     mocked.fetchBoard.mockResolvedValue(board([entry({ id: 'e5', label: 'A-05', status: 'SKIPPED' })]));
     await renderScreen();
     await tap(await screen.findByRole('button', { name: 'Change priority for A-05' }));
-    await tap(await screen.findByRole('radio', { name: 'Priority' }));
+    await tap(await screen.findByRole('radio', { name: 'Move up' }));
     await tap(await screen.findByRole('button', { name: 'Save priority' }));
     expect(await screen.findByText('Choose a reason for a priority above normal.')).toBeTruthy();
     expect(mocked.setEntryPriority).not.toHaveBeenCalled();
+  });
+});
+
+describe('refresh without a running consultation', () => {
+  it('Refresh reads the board and presence but not a consultation when none is running', async () => {
+    jest.mocked(useRealtimeStatus).mockReturnValue({ live: false, refetchInterval: false, statusChanged: false, clearStatusChanged: () => {} });
+    mocked.fetchBoard.mockResolvedValue(board([entry({ id: 'r1', label: 'A-50' })]));
+    await renderScreen();
+    await waitFor(() => expect(mocked.fetchBoard).toHaveBeenCalledTimes(1));
+    await tap(await screen.findByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(mocked.fetchBoard).toHaveBeenCalledTimes(2));
+    expect(mocked.fetchConsultation).not.toHaveBeenCalled();
   });
 });
 
@@ -323,11 +342,11 @@ describe('error copy on a refused call', () => {
 
   it('a refused call-next shows the copy for its reason', async () => {
     mocked.fetchBoard.mockResolvedValue(board([entry({ id: 'w1', label: 'A-10' })]));
-    mocked.callNext.mockRejectedValueOnce(new WalkInError(409, { code: 'QUEUE_CLOSED', message: 'x', reason_code: 'paused' } as never));
+    mocked.callNext.mockRejectedValueOnce(new WalkInError(409, { code: 'QUEUE_CLOSED', message: 'x', reason_code: 'closed' } as never));
     await renderScreen();
     await act(async () => {
       await tap(await screen.findByRole('button', { name: 'Call next patient' }));
     });
-    expect(await screen.findByText('This queue is paused: no new walk-ins can join. Calls still work.')).toBeTruthy();
+    expect(await screen.findByText('This queue is closed for today.')).toBeTruthy();
   });
 });

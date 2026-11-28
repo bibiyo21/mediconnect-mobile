@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button, Card, Notice, Screen, StateView } from '@/components/ui';
 import { BreakDialog } from '@/features/presence/BreakDialog';
-import { presenceErrorMessage } from '@/features/presence/copy';
+import { presenceErrorMessage, serviceModeLabel } from '@/features/presence/copy';
 import { formatManilaTime, formatShift } from '@/features/presence/format';
 import { presenceKeys, useDoctorDay, useOffline, usePresenceState } from '@/features/presence/hooks';
 import { endBreak, markAvailable, markUnavailable, startBreak, type DayLocation } from '@/features/presence/api';
@@ -192,7 +192,7 @@ export default function ClinicDay() {
               ) : (
                 l.shifts.map((s) => (
                   <Text key={s.starts_at} style={styles.meta}>
-                    {formatShift(s.starts_at, s.ends_at)} · {s.service_mode.replace(/_/g, ' ').toLowerCase()}
+                    {formatShift(s.starts_at, s.ends_at)} · {serviceModeLabel(s.service_mode)}
                   </Text>
                 ))
               )}

@@ -15,8 +15,8 @@ interface Props {
   label: string;
   /** The server's answer, already worded (protected until, or the hold). */
   windowText: string;
-  /** Defaults to the entry's stored triage reason, which the doctor can change. */
-  initialReason: PriorityReasonCode;
+  /** The reason the patient is in the queue, shown as a hint only. It is never pre-selected for the override. */
+  queueReasonLabel: string | null;
   busy: boolean;
   disabled: boolean;
   onConfirm: (reason: PriorityReasonCode) => void;
@@ -24,16 +24,30 @@ interface Props {
 }
 
 /** The confirm step for an urgent call during a protected window. Shows the gate wording and the reason code it sends. */
-export function OverrideConfirm({ label, windowText, initialReason, busy, disabled, onConfirm, onCancel }: Props) {
+export function OverrideConfirm({ label, windowText, queueReasonLabel, busy, disabled, onConfirm, onCancel }: Props) {
   const styles = useThemedStyles(createStyles);
-  const [reason, setReason] = useState<PriorityReasonCode>(initialReason);
+  // No reason is selected at the start: the doctor must choose one on purpose, so one tap cannot confirm a default.
+  const [reason, setReason] = useState<PriorityReasonCode | null>(null);
 
   return (
     <Card title={OVERRIDE_GATE_TITLE}>
       <Text style={styles.body}>{`${label}: ${windowText}`}</Text>
       <Text style={styles.note}>{OVERRIDE_GATE_BODY}</Text>
-      <ChoiceGroup label="Override reason (sent as a code)" options={REASONS} value={reason} onChange={setReason} />
-      <Button label={`Call ${label} with override`} onPress={() => onConfirm(reason)} loading={busy} disabled={disabled} />
+      <ChoiceGroup
+        label="Why are you calling now? (choose one)"
+        options={REASONS}
+        value={reason}
+        onChange={setReason}
+        variant="list"
+      />
+      {queueReasonLabel ? <Text style={styles.note}>{`Queue reason: ${queueReasonLabel}`}</Text> : null}
+      <Button
+        label={`Call ${label} now`}
+        onPress={() => reason && onConfirm(reason)}
+        loading={busy}
+        disabled={disabled || reason === null}
+        accessibilityHint={reason === null ? 'Choose a reason first' : undefined}
+      />
       <Button label="Do not call" variant="secondary" onPress={onCancel} disabled={busy} />
     </Card>
   );

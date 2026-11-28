@@ -10,6 +10,7 @@ import { buildCheckOutBody, canSubmit, INITIAL_CHECK_OUT, reduceCheckOut } from 
 import { presenceKeys, useOffline, usePresenceState } from '@/features/presence/hooks';
 import { useRefetchOnFocus } from '@/features/realtime/useRefetchOnFocus';
 import { fieldErrors } from '@/lib/errors';
+import { plural } from '@/lib/plural';
 import { space, typography } from '@/theme/tokens';
 import { useThemedStyles, type ThemeColors } from '@/theme/useTheme';
 
@@ -23,9 +24,17 @@ const REASONS: { value: CheckOutReason; label: string }[] = [
   { value: 'OTHER', label: 'Other' },
 ];
 
-const DISPOSITIONS: { value: CheckOutDisposition; label: string }[] = [
-  { value: 'HOLD_FOR_REASSIGNMENT', label: 'Keep walk-ins waiting for reassignment' },
-  { value: 'NOTIFY_AND_CANCEL', label: 'Cancel walk-ins with notice' },
+const DISPOSITIONS: { value: CheckOutDisposition; label: string; description: string }[] = [
+  {
+    value: 'HOLD_FOR_REASSIGNMENT',
+    label: 'Keep walk-ins in the queue',
+    description: 'The clinic desk decides next steps. Nothing is cancelled.',
+  },
+  {
+    value: 'NOTIFY_AND_CANCEL',
+    label: 'Cancel walk-ins with notice',
+    description: 'Walk-ins still in the queue (waiting, not arrived or skipped) are cancelled. Patients with the app are notified if their notifications are on.',
+  },
 ];
 
 /**
@@ -59,6 +68,9 @@ export default function CheckOut() {
   useRefetchOnFocus(refetchAll);
 
   const guestCount = preview.data?.queues.reduce((sum, q) => sum + q.guest_count, 0) ?? 0;
+  const waitingCount = preview.data?.queues.reduce((n, q) => n + q.counts.waiting + q.counts.registered, 0) ?? 0;
+  // NOTIFY_AND_CANCEL cancels every dispositionable entry: waiting, not arrived (registered) and skipped (backend CheckOutQueueFacts).
+  const cancelCount = preview.data?.queues.reduce((n, q) => n + q.counts.waiting + q.counts.registered + q.counts.skipped, 0) ?? 0;
   const blocked = (preview.data?.blocking.length ?? 0) > 0;
 
   const submit = useMutation({
@@ -98,7 +110,7 @@ export default function CheckOut() {
         <Card title="Done">
           {result ? (
             <>
-              <Text style={styles.body}>You are checked out. Your appointments were not cancelled.</Text>
+              <Text style={styles.body}>You are checked out. No appointment was cancelled. Booked patients are not told automatically.</Text>
               <Text style={styles.meta}>Queues paused: {result.result.queues_paused}</Text>
               <Text style={styles.meta}>Walk-ins held: {result.result.entries_held}</Text>
               <Text style={styles.meta}>Walk-ins cancelled with notice: {result.result.entries_cancelled}</Text>
@@ -162,8 +174,7 @@ export default function CheckOut() {
       {flow.step === 1 ? (
         <Card title="What is open">
           <Text style={styles.body}>
-            {p.queues.reduce((n, q) => n + q.counts.waiting + q.counts.registered, 0)} waiting walk-ins ·{' '}
-            {p.appointments.count} appointments today
+            {plural(waitingCount, 'waiting walk-in')} · {plural(p.appointments.count, 'appointment')} today
           </Text>
           <Text style={styles.meta}>Counts only. No names are shown here.</Text>
           <Button label="Next" onPress={() => dispatch({ type: 'next', blocked: false })} disabled={offline} />
@@ -179,8 +190,14 @@ export default function CheckOut() {
               <Notice key={`${b.code}-${i}`} tone="warning" message={checkOutBlockText(b.code, b.reason_code)} />
             ))
           )}
-          {blocked ? <Text style={styles.meta}>Finish the item above. This screen refreshes when you come back to it.</Text> : null}
-          <Button label="Next" onPress={() => dispatch({ type: 'next', blocked })} disabled={blocked || offline} />
+          {blocked ? (
+            <>
+              <Button label="Open the walk-in queue" onPress={() => router.push('/doctor/queue')} />
+              <Text style={styles.meta}>Finish the consultation or the called patient first. This screen refreshes when you come back.</Text>
+            </>
+          ) : (
+            <Button label="Next" onPress={() => dispatch({ type: 'next', blocked: false })} disabled={offline} />
+          )}
           <Button label="Back" variant="secondary" onPress={() => dispatch({ type: 'back' })} />
         </Card>
       ) : null}
@@ -202,21 +219,27 @@ export default function CheckOut() {
       {flow.step === 4 ? (
         <Card title="Walk-ins and confirm">
           <Text style={styles.body}>
-            No appointment is cancelled. {p.appointments.count} appointments will be flagged for rescheduling.
+            No appointment is cancelled. {p.appointments.count === 1 ? '1 booked patient is' : `${p.appointments.count} booked patients are`} flagged for
+            rescheduling. They are not told automatically: contact them or ask the clinic desk.
           </Text>
           <ChoiceGroup
             label="What happens to waiting walk-ins?"
             options={DISPOSITIONS}
             value={flow.disposition}
             onChange={(disposition) => dispatch({ type: 'disposition', disposition })}
+            variant="list"
           />
           {cancelling ? (
             <View style={styles.stack}>
-              <Notice tone="warning" message="Cancelling sends notice to waiting patients in the app. Guests have no app, so tell them in person." />
+              <Text style={styles.body}>
+                {plural(cancelCount, 'walk-in')} will be cancelled
+                {guestCount > 0 ? `, ${guestCount} of them ${guestCount === 1 ? 'a guest' : 'guests'} without the app` : ''}.
+              </Text>
+              <Notice tone="warning" message="Patients with the app are notified if their notifications are on. Guests have no app: tell them in person." />
               <Checkbox
                 checked={flow.confirmedNotify}
                 onChange={(confirmed) => dispatch({ type: 'confirmNotify', confirmed })}
-                label="I understand that waiting walk-ins will be cancelled."
+                label="I understand that these walk-ins will be cancelled."
                 accessibilityLabel="Confirm walk-in cancellation"
               />
               {guestCount > 0 ? (
@@ -229,12 +252,16 @@ export default function CheckOut() {
               ) : null}
             </View>
           ) : null}
+          {cancelling && !ready ? (
+            <Text style={styles.meta}>{guestCount > 0 ? 'Tick both boxes above to continue.' : 'Tick the box above to continue.'}</Text>
+          ) : null}
           <Button
             label="Check out"
             variant={cancelling ? 'danger' : 'primary'}
             onPress={() => submit.mutate()}
             loading={busy}
             disabled={!ready || busy || offline}
+            accessibilityHint={!ready ? (guestCount > 0 ? 'Tick both boxes above to enable check-out' : 'Tick the box above to enable check-out') : undefined}
           />
           <Button label="Back" variant="secondary" onPress={() => dispatch({ type: 'back' })} disabled={busy} />
         </Card>

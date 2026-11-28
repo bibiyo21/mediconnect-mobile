@@ -9,8 +9,8 @@ function refusal(status: number, code: string, reasonCode: string | null, errors
 describe('queueErrorMessage (real backend codes and reason codes)', () => {
   it('APPOINTMENT_WINDOW_PROTECTED: appointment wording with the window time, never "always protected"', () => {
     const text = queueErrorMessage(refusal(409, 'APPOINTMENT_WINDOW_PROTECTED', 'appointment', { blocked_until: ['2026-11-28T03:00:00Z'] }));
-    expect(text).toMatch(/^Appointment times are protected until about /);
-    expect(text).toContain('unless the clinic prioritises an urgent patient');
+    expect(text).toMatch(/^A booked patient's time is reserved until about /);
+    expect(text).toContain('Wait, or call this patient now with a reason.');
     expect(text).not.toMatch(/always/i);
   });
 
@@ -57,7 +57,7 @@ describe('display helpers', () => {
     expect(estimateText({ estimate: { min_minutes: 10, max_minutes: 20, wait_status: 'ESTIMATED' } } as never)).toBe(
       'About 10 to 20 min · estimate, not a guarantee',
     );
-    expect(estimateText({ estimate: { min_minutes: null, max_minutes: null, wait_status: 'NOT_AVAILABLE_YET' } } as never)).toBe('Estimate later in the day');
+    expect(estimateText({ estimate: { min_minutes: null, max_minutes: null, wait_status: 'NOT_AVAILABLE_YET' } } as never)).toBe('No estimate yet');
   });
 
   it('shows only the server label for an HMO claim, never the typed card name', () => {

@@ -54,6 +54,12 @@ jobs:
       - name: Install Chromium for Playwright
         run: pnpm exec playwright install --with-deps chromium
       - name: Browser tests (Playwright + axe, API mocked)
+        # Non-secret test values: the realtime e2e tests fake the Reverb socket and need the app key at dev-server start.
+        env:
+          EXPO_PUBLIC_REVERB_APP_KEY: mediconnect-e2e-key
+          EXPO_PUBLIC_REVERB_HOST: reverb.example.test
+          EXPO_PUBLIC_REVERB_PORT: '8080'
+          EXPO_PUBLIC_REVERB_SCHEME: http
         run: pnpm e2e
       - uses: actions/upload-artifact@v4
         if: failure()

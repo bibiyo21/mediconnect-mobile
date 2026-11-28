@@ -10,7 +10,7 @@ const CHECK_IN_REASON: Record<string, string> = {
   no_service_mode: 'No in-person service is set up for this clinic.',
   clinic_closed: 'The clinic is closed now.',
   closed_holiday: 'The clinic is closed today for a holiday.',
-  outside_hours: 'You are outside your shift window.',
+  outside_hours: 'You are outside your scheduled hours here.',
 };
 
 /** Why a check-in is not allowed, from the server's reason_code. `opensAt` is a Manila time label, when known. */
@@ -53,10 +53,21 @@ export function presenceErrorMessage(error: unknown): string {
 
 /** Copy for one blocking item on the check-out preview. */
 export function checkOutBlockText(code: string, reasonCode: string): string {
-  if (reasonCode === 'interrupted') return 'A consultation is interrupted. Resume and end it first.';
+  if (reasonCode === 'interrupted') return 'A consultation is interrupted. Resume it, then end it first.';
   if (reasonCode === 'in_progress') return 'A consultation is in progress. Finish it first.';
   if (reasonCode === 'called' || code === 'CALLED') return 'A patient is called. Start, skip or mark no-show first.';
   if (reasonCode === 'not_checked_in') return 'You are not checked in, so there is nothing to check out of. Refresh to see your status.';
   if (code === 'ACTIVE_CONSULTATION') return 'A consultation is in progress. Finish it first.';
   return 'Something blocks check-out right now. Resolve it, then check again.';
+}
+
+const SERVICE_MODE_LABEL: Record<string, string> = {
+  APPOINTMENT: 'Appointments only',
+  WALK_IN: 'Walk-ins only',
+  BOTH: 'Appointments and walk-ins',
+};
+
+/** A shift's service mode as a doctor reads it. Unknown codes are shown without the raw enum. */
+export function serviceModeLabel(mode: string): string {
+  return SERVICE_MODE_LABEL[mode] ?? 'Service set up';
 }

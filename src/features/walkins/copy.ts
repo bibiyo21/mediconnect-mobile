@@ -28,20 +28,20 @@ const QUEUE_CLOSED: Record<string, string> = {
 
 const ALREADY_CALLING: Record<string, string> = {
   other_queue: 'You already have a called patient in another queue. Finish or skip that patient first.',
-  previous_day: 'A patient from an earlier day is still called. The clinic desk has to clear that entry first.',
+  previous_day: 'A patient from an earlier day is still called. The clinic desk has to clear that entry first. If there is no desk, contact support.',
 };
 
 const ACTIVE_CONSULTATION: Record<string, string> = {
   called: 'A patient is called. Start, skip or mark no-show first.',
   in_progress: 'Finish the consultation in progress first.',
-  interrupted: 'An interrupted consultation is open. Resume or end it first.',
+  interrupted: 'An interrupted consultation is open. Resume it, then end it first.',
 };
 
 /** Formats the protected-window refusal. The instant is shown in Manila time, as an estimate of when the window ends. */
 export function protectedWindowText(error: WalkInError): string {
   const until = error.blockedUntil ? ` until about ${formatManilaTime(error.blockedUntil)}` : '';
-  if (error.reasonCode === 'hold') return `This time is held${until}. Call an urgent patient only with a reason, or wait.`;
-  return `Appointment times are protected${until} unless the clinic prioritises an urgent patient.`;
+  if (error.reasonCode === 'hold') return `This time is held${until}. You can wait, or call now with a reason.`;
+  return `A booked patient's time is reserved${until}. Wait, or call this patient now with a reason.`;
 }
 
 /** Text for a failed queue action. Codes come from docs/api-specification.md §2.9; unknown codes fall back to a safe line. */
@@ -76,6 +76,7 @@ export function queueErrorMessage(error: unknown): string {
     case 'CONCURRENT_MODIFICATION':
       return 'The queue is busy. Try again in a moment.';
     case 'CAPACITY_OVERRIDE_REQUIRED':
+      return 'This needs a clinic override. Ask the clinic desk.';
     case 'VALIDATION_FAILED':
       return 'That change was not accepted. Check the reason and try again.';
     case 'NOT_FOUND':
@@ -92,7 +93,7 @@ export function queueErrorMessage(error: unknown): string {
 export function estimateText(entry: Pick<WalkInEntry, 'estimate'>): string | null {
   const e = entry.estimate;
   if (!e) return null;
-  if (e.wait_status === 'NOT_AVAILABLE_YET') return 'Estimate later in the day';
+  if (e.wait_status === 'NOT_AVAILABLE_YET') return 'No estimate yet';
   if (e.min_minutes === null || e.max_minutes === null) return 'Estimate not shown';
   return `About ${e.min_minutes} to ${e.max_minutes} min · estimate, not a guarantee`;
 }
@@ -107,9 +108,9 @@ export const PRIORITY_REASON_LABELS: Record<PriorityReasonCode, string> = {
   PREGNANT: 'Pregnant',
   DOCTOR_REQUEST: 'Doctor requested',
   STAFF_CONCERN: 'Staff concern',
-  OTHER: 'Other (see clinic desk)',
+  OTHER: 'Other reason',
 };
 
-export const OVERRIDE_GATE_TITLE = 'Call during a protected time?';
+export const OVERRIDE_GATE_TITLE = 'Call this patient now?';
 export const OVERRIDE_GATE_BODY =
-  'Appointment times are protected unless the clinic prioritises an urgent patient. This queue is not an emergency service. The reason you choose is recorded for the clinic; no details are shown to the patient.';
+  'This time is reserved for a booked patient. Calling a walk-in now may delay them, and they are not told automatically. Use this only on your own judgement. This is not a triage tool or an emergency service: for a medical emergency, follow your clinic\'s emergency procedure. The reason you choose is recorded; the patient does not see it.';

@@ -21,7 +21,7 @@ export class IntentKeys {
     return key;
   }
 
-  /** Call after the request settles. `retryWithSameKey` is true only for a network failure. */
+  /** Call after the request settles. `retryWithSameKey` is true while the answer is not final (see keepsKey). */
   settle(intent: string, retryWithSameKey: boolean): void {
     if (!retryWithSameKey) this.keys.delete(intent);
   }

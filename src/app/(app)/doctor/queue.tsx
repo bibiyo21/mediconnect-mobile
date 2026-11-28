@@ -15,7 +15,7 @@ import { useRefetchOnFocus } from '@/features/realtime/useRefetchOnFocus';
 import { EntryRow } from '@/features/walkins/EntryRow';
 import { OverrideConfirm } from '@/features/walkins/OverrideConfirm';
 import { PriorityDialog } from '@/features/walkins/PriorityDialog';
-import { protectedWindowText, queueErrorMessage } from '@/features/walkins/copy';
+import { PRIORITY_REASON_LABELS, protectedWindowText, queueErrorMessage } from '@/features/walkins/copy';
 import { useBoard, useConsultation } from '@/features/walkins/hooks';
 import { IntentKeys, keepsKey } from '@/features/walkins/idempotency';
 import { entryActions, type QueueAction } from '@/features/walkins/queueActions';
@@ -36,7 +36,6 @@ import {
   WalkInError,
   type BoardQueue,
   type PriorityLevelName,
-  type PriorityReasonCode,
   type WalkInEntry,
 } from '@/features/walkins/api';
 import { walkinKeys } from '@/features/walkins/keys';
@@ -92,13 +91,14 @@ export default function DoctorQueue() {
   const running = queues.flatMap((q) => q.entries).find((e) => e.status === 'IN_CONSULTATION');
   const consultation = useConsultation(running?.consultation_id ?? null);
   const { refetch: refetchConsultation } = consultation;
+  const runningConsultationId = running?.consultation_id ?? null;
+  // Only read the consultation when one is running: with none, the query has no id and the request would 404.
   const refetchAll = useCallback(() => {
     void refetchPresence();
     void refetchBoard();
-    void refetchConsultation();
-  }, [refetchPresence, refetchBoard, refetchConsultation]);
+    if (runningConsultationId) void refetchConsultation();
+  }, [refetchPresence, refetchBoard, refetchConsultation, runningConsultationId]);
   useRefetchOnFocus(refetchAll);
-
 
   const run = useMutation({
     mutationFn: async (job: Job) => {
@@ -213,7 +213,7 @@ export default function DoctorQueue() {
       {offline ? <Notice tone="warning" message="You are offline. Queue actions are paused until you reconnect." /> : null}
       {!live ? (
         <>
-          <Notice tone="info" message="Updates paused. Use Refresh to check again." />
+          <Notice tone="info" message="Updates paused. This list may be out of date. Refresh before you call." />
           <Button label="Refresh" variant="secondary" onPress={refetchAll} />
         </>
       ) : null}
@@ -221,9 +221,10 @@ export default function DoctorQueue() {
 
       {override ? (
         <OverrideConfirm
+          key={override.entry.id}
           label={override.entry.label}
           windowText={override.windowText}
-          initialReason={(override.entry.priority_reason_code ?? 'OTHER') as PriorityReasonCode}
+          queueReasonLabel={override.entry.priority_reason_code ? PRIORITY_REASON_LABELS[override.entry.priority_reason_code] : null}
           busy={run.isPending}
           disabled={offline}
           onConfirm={(reason) =>
@@ -267,7 +268,7 @@ export default function DoctorQueue() {
           return (
             <Card key={queue.id} title={`Your queue · ${queue.status.toLowerCase()}`}>
               <Text style={styles.meta}>
-                {queue.live_count} still in the queue · {waiting.length} waiting · {skipped.length} skipped · {notArrived} not arrived yet
+                {waiting.length} waiting · {notArrived} not arrived · {skipped.length} skipped
               </Text>
               {queue.status === 'PAUSED' ? (
                 <Notice tone="info" message="This queue is paused: no new walk-ins can join. You can still call patients already in it." />

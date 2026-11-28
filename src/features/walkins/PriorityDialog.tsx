@@ -7,9 +7,9 @@ import { PRIORITY_REASON_LABELS } from './copy';
 import type { PriorityLevelName, PriorityReasonCode } from './api';
 
 const LEVELS: { value: PriorityLevelName; label: string }[] = [
-  { value: 'NORMAL', label: 'Normal' },
-  { value: 'PRIORITY', label: 'Priority' },
-  { value: 'URGENT', label: 'Urgent' },
+  { value: 'NORMAL', label: 'Normal order' },
+  { value: 'PRIORITY', label: 'Move up' },
+  { value: 'URGENT', label: 'Move to front' },
 ];
 
 const REASONS: { value: PriorityReasonCode; label: string }[] = (
@@ -48,10 +48,11 @@ export function PriorityDialog({ label, current, busy, disabled, onSave, onCance
     <Card title={`Priority for ${label}`}>
       <Text style={styles.note}>
         Priority changes the queue order. It is not a clinical triage decision. It does not change any appointment time.
+        {" For a medical emergency, follow your clinic's emergency procedure."}
       </Text>
       <ChoiceGroup label="Priority level" options={LEVELS} value={level} onChange={setLevel} />
       {level !== 'NORMAL' ? (
-        <ChoiceGroup label="Reason (choose one)" options={REASONS} value={reason ?? ('' as PriorityReasonCode)} onChange={setReason} error={error} />
+        <ChoiceGroup label="Reason for queue order" options={REASONS} value={reason} onChange={setReason} error={error} />
       ) : null}
       {level === 'NORMAL' && error ? <Text style={styles.error}>{error}</Text> : null}
       <Button label="Save priority" onPress={save} loading={busy} disabled={disabled} />
